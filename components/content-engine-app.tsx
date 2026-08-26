@@ -12,13 +12,14 @@ import {
 } from "@/lib/content-engine";
 import { mapGeneratedToCarousel } from "@/lib/map-generated-carousel";
 import type { GenerateResponse } from "@/lib/api-types";
-import type { Carousel, GenreId, Slide } from "@/lib/types";
+import type { Carousel, FormatId, GenreId, Slide } from "@/lib/types";
 import {
   downloadSlidesZip,
   slidesToExportFormat,
 } from "@/utils/generateSlides";
 
 export function ContentEngineApp() {
+  const [format, setFormat] = useState<FormatId>("story");
   const [genre, setGenre] = useState<GenreId>(DEFAULT_CAROUSEL.genre);
   const [carousel, setCarousel] = useState<Carousel>(DEFAULT_CAROUSEL);
   const [busy, setBusy] = useState(false);
@@ -34,7 +35,7 @@ export function ContentEngineApp() {
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ genre }),
+        body: JSON.stringify({ genre, format }),
       });
 
       const payload = (await response.json()) as
@@ -108,10 +109,12 @@ export function ContentEngineApp() {
         canDownload={carousel.slides.length === 5 && !busy}
       />
       <ControlPanel
+        format={format}
         genre={genre}
         busy={busy}
         copied={copied}
         error={error}
+        onFormatChange={setFormat}
         onGenreChange={setGenre}
         onGenerate={handleGenerate}
         onCopyAll={handleCopyAll}

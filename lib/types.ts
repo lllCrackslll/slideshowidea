@@ -1,8 +1,6 @@
-export type GenreId =
-  | "neuroscience"
-  | "debunking"
-  | "routines"
-  | "tech";
+export type GenreId = "motivation" | "conseil";
+
+export type FormatId = "story" | "short";
 
 export type Slide = {
   id: string;
@@ -19,6 +17,12 @@ export type Carousel = {
   slides: Slide[];
   caption: string;
   hashtags: string[];
+};
+
+export type Format = {
+  id: FormatId;
+  emoji: string;
+  label: string;
 };
 
 export type Genre = {

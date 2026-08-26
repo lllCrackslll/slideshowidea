@@ -1,4 +1,4 @@
-import type { GenreId } from "./types";
+import type { FormatId, GenreId } from "./types";
 
 export type GeneratedSlide = {
   slide_number: number;
@@ -16,6 +16,7 @@ export type GenerateResponse = {
 
 export type GenerateRequest = {
   genre: GenreId;
+  format: FormatId;
 };
 
 export const CAROUSEL_JSON_SCHEMA = {

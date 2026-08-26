@@ -1,30 +1,81 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
 import { CAROUSEL_JSON_SCHEMA, type GenerateRequest } from "@/lib/api-types";
-import { genreLabel } from "@/lib/content-engine";
-import type { GenreId } from "@/lib/types";
+import { formatLabel, genreLabel } from "@/lib/content-engine";
+import type { FormatId, GenreId } from "@/lib/types";
 
-const GENRE_IDS: GenreId[] = ["neuroscience", "debunking", "routines", "tech"];
+const GENRE_IDS: GenreId[] = ["motivation", "conseil"];
+const FORMAT_IDS: FormatId[] = ["story", "short"];
 
-const SYSTEM_PROMPT = `Tu es un créateur d'élite de carrousels TikTok pour étudiants (lycée, prépa, fac).
+const STORY_SYSTEM_PROMPT = `Tu écris des carrousels TikTok pour étudiants (lycée, prépa, fac).
+
+Format : STORY — récit d'expérience personnelle.
+
+Voix obligatoire :
+- Parle comme un grand frère / une pote de promo bienveillante.
+- Toujours à la première personne : « je », « mon », « moi », « perso ».
+- Mélange vécu personnel, motivation simple et conseil concret.
+- Jamais de ton magistral, professoral ou condescendant.
 
 Structure obligatoire des 5 slides :
-- Slide 1 (Hook) : phrase choc ou contre-intuitive sur le travail ou le stress des cours. Zéro mention d'application.
-- Slides 2 et 3 : 100 % valeur éducative pure (Active Recall, méthode Feynman, gestion du temps, neuroscience appliquée, etc.). Zéro mention d'application.
-- Slide 4 : placement subtil et naturel de l'application Kognia (scan de notes manuscrites, import PDF, fiches synthèses swipeables, quiz IA, coachs virtuels Maya/Noah/Zoé/Hugo, mode Pomodoro) comme outil pour appliquer le conseil des slides précédentes.
-- Slide 5 (CTA) : synthèse rapide + appel à l'action discret vers le lien en bio (@kognia.app).
+- Slide 1 (Hook / Vécu) : une phrase sur une galère ou un doute vécu au début (stress, fatigue, mauvaises notes, surcharge de rentrée). Zéro mention d'application.
+- Slide 2 (Prise de conscience) : le constat honnête sur l'ancienne méthode qui ne marchait pas. Zéro mention d'application.
+- Slide 3 (Déclic & Motivation) : le conseil simple ou le changement de mentalité appliqué pour s'en sortir sans s'épuiser. Zéro mention d'application.
+- Slide 4 (Routine / Kognia) : comment j'applique ce conseil au quotidien avec l'app Kognia (scan, PDF, fiches swipeables, quiz IA, coachs Maya/Noah/Zoé/Hugo, mode focus/Pomodoro).
+- Slide 5 (Encouragement & CTA) : motivation fraternelle + rappel discret du lien en bio (@kognia.app).
 
-Style :
-- Textes très courts : 1 à 2 phrases max par slide.
-- Ton percutant, direct, crédible, jamais condescendant.
-- Français naturel, adapté TikTok study.
-- Chaque slide a un title court (accroche) et un text (corps).
-- background_idea : description visuelle concrète pour créer la slide (ambiance, objet, cadrage).
-- caption : légende TikTok complète avec sauts de ligne, prête à publier.
-- hashtags : 8 à 12 hashtags pertinents, sans le # (ajouté côté app).`;
+Contraintes :
+- 1 à 2 phrases max par slide.
+- Chaque slide : title (accroche) + text (corps).
+- background_idea : description visuelle concrète.
+- caption : légende TikTok à la première personne, prête à publier.
+- hashtags : 8 à 12, sans le #.`;
+
+const SHORT_SYSTEM_PROMPT = `Tu écris des carrousels TikTok ultra-courts pour étudiants (lycée, prépa, fac).
+
+Format : SHORT — quelques mots par slide, style punchline scroll-stopping.
+
+Voix :
+- Phrases fragmentées, percutantes, lisibles en 2 secondes.
+- Pas de récit long. Pas de paragraphe. Pas de ton professoral.
+- Tu peux utiliser « tu » ou impératif pour parler direct à l'étudiant.
+
+Structure obligatoire des 5 slides (même arc narratif, version ultra condensée) :
+- Slide 1 (Hook) : 3 à 8 mots max. Galère ou vérité qui pique. Pas d'app.
+- Slide 2 (Erreur) : 3 à 8 mots max. L'ancienne méthode qui foire. Pas d'app.
+- Slide 3 (Fix) : 3 à 8 mots max. Le conseil ou le déclic en une punchline. Pas d'app.
+- Slide 4 (Kognia) : 3 à 10 mots max. Mention naturelle et brève de Kognia (scan, fiches, quiz, focus).
+- Slide 5 (CTA) : 3 à 8 mots max. Motivation + lien en bio (@kognia.app).
+
+Contraintes :
+- title : 2 à 5 mots max (gros texte à l'écran).
+- text : 0 à 6 mots max. Peut être vide si title suffit. Jamais plus d'une micro-phrase.
+- Total title + text : ne dépasse jamais 12 mots par slide.
+- background_idea : description visuelle concrète et minimaliste.
+- caption : légende courte (3 à 5 lignes max), directe, prête à publier.
+- hashtags : 8 à 12, sans le #.`;
 
 function isGenreId(value: unknown): value is GenreId {
   return typeof value === "string" && GENRE_IDS.includes(value as GenreId);
+}
+
+function isFormatId(value: unknown): value is FormatId {
+  return typeof value === "string" && FORMAT_IDS.includes(value as FormatId);
+}
+
+function systemPromptFor(format: FormatId): string {
+  return format === "short" ? SHORT_SYSTEM_PROMPT : STORY_SYSTEM_PROMPT;
+}
+
+function userPromptFor(
+  format: FormatId,
+  genreName: string,
+): string {
+  if (format === "short") {
+    return `Format : Short.\nThème : ${genreName}.\nChoisis un angle ${genreName === "Motivation" ? "motivant et encourageant" : "pratique et actionnable"} pour cette catégorie, puis génère un carrousel TikTok ultra-court en français — quelques mots par slide, punchlines seulement.`;
+  }
+
+  return `Format : Story.\nThème : ${genreName}.\nChoisis un sujet ${genreName === "Motivation" ? "motivant (mindset, confiance, persévérance)" : "de conseil concret (méthode, organisation, révision)"} pour cette catégorie, puis génère un carrousel TikTok complet en français, entièrement à la première personne (voix pote de promo / grand frère).`;
 }
 
 export async function POST(request: Request) {
@@ -47,19 +98,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Genre invalide." }, { status: 400 });
   }
 
-  const genreName = genreLabel(body.genre);
+  if (!isFormatId(body.format)) {
+    return NextResponse.json({ error: "Format invalide." }, { status: 400 });
+  }
 
-  const userPrompt = `Catégorie : ${genreName}.\nChoisis un sujet pertinent et varié pour cette catégorie, puis génère un carrousel TikTok complet en français.`;
+  const genreName = genreLabel(body.genre);
+  const formatName = formatLabel(body.format);
 
   const openai = new OpenAI({ apiKey });
 
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      temperature: 0.85,
+      temperature: body.format === "short" ? 0.9 : 0.85,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userPrompt },
+        { role: "system", content: systemPromptFor(body.format) },
+        {
+          role: "user",
+          content: userPromptFor(body.format, `${genreName} (${formatName})`),
+        },
       ],
       response_format: {
         type: "json_schema",
