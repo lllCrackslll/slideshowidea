@@ -20,8 +20,8 @@ export function Header({
           <h1 className="text-sm font-medium tracking-tight text-zinc-100">
             Kognia Content Engine
           </h1>
-          <span className="rounded-full border border-[#27272a] px-2 py-0.5 text-[10px] font-medium tracking-wide text-zinc-500">
-            Internal Tool
+          <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium tracking-wide text-emerald-400">
+            Distribution TikTok
           </span>
         </div>
         <div className="flex items-center gap-2">

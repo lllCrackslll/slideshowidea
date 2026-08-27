@@ -10,9 +10,11 @@ type ControlPanelProps = {
   busy: boolean;
   copied: boolean;
   error: string | null;
+  batchLabel?: string | null;
   onFormatChange: (format: FormatId) => void;
   onGenreChange: (genre: GenreId) => void;
   onGenerate: () => void;
+  onGenerateBatch: () => void;
   onCopyAll: () => void;
 };
 
@@ -22,9 +24,11 @@ export function ControlPanel({
   busy,
   copied,
   error,
+  batchLabel,
   onFormatChange,
   onGenreChange,
   onGenerate,
+  onGenerateBatch,
   onCopyAll,
 }: ControlPanelProps) {
   return (
@@ -83,7 +87,16 @@ export function ControlPanel({
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={onGenerateBatch}
+              disabled={busy}
+              className="inline-flex h-10 items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 text-sm font-medium text-emerald-300 transition-colors hover:bg-emerald-500/15 disabled:opacity-60"
+            >
+              <Sparkles className={`h-4 w-4 ${busy ? "animate-pulse" : ""}`} />
+              3 concepts du jour
+            </button>
             <button
               type="button"
               onClick={onGenerate}
@@ -91,7 +104,7 @@ export function ControlPanel({
               className="inline-flex h-10 items-center gap-2 rounded-lg bg-zinc-100 px-4 text-sm font-medium text-zinc-950 transition-colors hover:bg-white disabled:opacity-60"
             >
               <Sparkles className={`h-4 w-4 ${busy ? "animate-pulse" : ""}`} />
-              Générer le carrousel
+              1 concept
             </button>
             <button
               type="button"
@@ -107,6 +120,10 @@ export function ControlPanel({
             </button>
           </div>
         </div>
+
+        {batchLabel ? (
+          <p className="text-xs text-emerald-400/90">{batchLabel}</p>
+        ) : null}
 
         {error ? (
           <p className="text-xs text-red-400/90" role="alert">

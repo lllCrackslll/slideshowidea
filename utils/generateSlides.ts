@@ -1,7 +1,32 @@
+import {
+  accountFolderName,
+  buildVariantProfiles,
+  type VariantProfile,
+} from "@/lib/carousel-variants";
+import type JSZip from "jszip";
+
 export type ExportSlide = {
   slideNumber: number;
   title?: string;
   text: string;
+};
+
+export type DistributionPackInput = {
+  slides: ExportSlide[];
+  topicTitle: string;
+  caption: string;
+  hashtags: string[];
+  accountCount: number;
+  conceptLabel?: string;
+  onProgress?: (done: number, total: number) => void;
+};
+
+export type DailyPackConcept = {
+  topicTitle: string;
+  caption: string;
+  hashtags: string[];
+  slides: ExportSlide[];
+  accountCount: number;
 };
 
 const WIDTH = 1080;
@@ -23,19 +48,24 @@ const BROLL_POOLS = {
   cta: ["/broll/cta-1.jpg", "/broll/cta-2.jpg"],
 } as const;
 
-function pickRandom<T>(items: readonly T[]): T {
-  return items[Math.floor(Math.random() * items.length)];
+function seededRandom(seed: number): () => number {
+  let state = seed % 2147483647;
+  if (state <= 0) state += 2147483646;
+  return () => {
+    state = (state * 16807) % 2147483647;
+    return (state - 1) / 2147483646;
+  };
 }
 
-function pickBrollPath(slideNumber: number): string {
-  if (slideNumber === 1) return pickRandom(BROLL_POOLS.hook);
-  if (slideNumber === 4) return pickRandom(BROLL_POOLS.app);
-  if (slideNumber === 5) return pickRandom(BROLL_POOLS.cta);
-  return pickRandom(BROLL_POOLS.content);
+function pickFromPool<T>(items: readonly T[], rand: () => number): T {
+  return items[Math.floor(rand() * items.length)];
 }
 
-function randomZoom(): number {
-  return 1 + (Math.random() * 0.04 + 0.01);
+function pickBrollPath(slideNumber: number, rand: () => number): string {
+  if (slideNumber === 1) return pickFromPool(BROLL_POOLS.hook, rand);
+  if (slideNumber === 4) return pickFromPool(BROLL_POOLS.app, rand);
+  if (slideNumber === 5) return pickFromPool(BROLL_POOLS.cta, rand);
+  return pickFromPool(BROLL_POOLS.content, rand);
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -60,24 +90,32 @@ function drawFallbackBackground(ctx: CanvasRenderingContext2D): void {
 async function drawBackground(
   ctx: CanvasRenderingContext2D,
   slideNumber: number,
+  variant: VariantProfile,
 ): Promise<void> {
-  const src = pickBrollPath(slideNumber);
+  const rand = seededRandom(variant.seed + slideNumber * 131);
+  const src = pickBrollPath(slideNumber, rand);
+  const zoom = 1 + 0.01 + variant.zoomExtra + rand() * 0.04;
+
   try {
     const img = await loadImage(src);
-    const zoom = randomZoom();
     const drawWidth = WIDTH * zoom;
     const drawHeight = HEIGHT * zoom;
     const offsetX = (WIDTH - drawWidth) / 2;
     const offsetY = (HEIGHT - drawHeight) / 2;
+    ctx.filter = `brightness(${variant.brightness}%) contrast(${variant.contrast}%) saturate(${variant.saturation}%)`;
     ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+    ctx.filter = "none";
   } catch {
     drawFallbackBackground(ctx);
   }
 
+  const top = variant.overlayOpacity + 0.04;
+  const mid = variant.overlayOpacity - 0.06;
+  const bottom = variant.overlayOpacity + 0.08;
   const overlay = ctx.createLinearGradient(0, 0, 0, HEIGHT);
-  overlay.addColorStop(0, "rgba(0, 0, 0, 0.52)");
-  overlay.addColorStop(0.45, "rgba(0, 0, 0, 0.38)");
-  overlay.addColorStop(1, "rgba(0, 0, 0, 0.62)");
+  overlay.addColorStop(0, `rgba(0, 0, 0, ${top})`);
+  overlay.addColorStop(0.45, `rgba(0, 0, 0, ${mid})`);
+  overlay.addColorStop(1, `rgba(0, 0, 0, ${bottom})`);
   ctx.fillStyle = overlay;
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 }
@@ -149,14 +187,21 @@ function slideDisplayText(slide: ExportSlide): string {
   return text || title || "";
 }
 
-async function renderSlideToCanvas(slide: ExportSlide): Promise<HTMLCanvasElement> {
+async function renderSlideToCanvas(
+  slide: ExportSlide,
+  variant?: VariantProfile,
+): Promise<HTMLCanvasElement> {
+  const profile =
+    variant ??
+    buildVariantProfiles(1, slide.slideNumber * 1000)[0];
+
   const canvas = document.createElement("canvas");
   canvas.width = WIDTH;
   canvas.height = HEIGHT;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas 2D indisponible.");
 
-  await drawBackground(ctx, slide.slideNumber);
+  await drawBackground(ctx, slide.slideNumber, profile);
 
   ctx.font = `600 34px Arial, Helvetica, sans-serif`;
   ctx.textAlign = "center";
@@ -174,15 +219,19 @@ async function renderSlideToCanvas(slide: ExportSlide): Promise<HTMLCanvasElemen
   return canvas;
 }
 
-function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+function canvasToBlob(
+  canvas: HTMLCanvasElement,
+  type: "image/png" | "image/jpeg" = "image/png",
+  quality = 1,
+): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => {
         if (blob) resolve(blob);
-        else reject(new Error("Export PNG impossible."));
+        else reject(new Error("Export impossible."));
       },
-      "image/png",
-      1,
+      type,
+      quality,
     );
   });
 }
@@ -195,6 +244,138 @@ function slugify(value: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 48);
+}
+
+function captionFile(caption: string, hashtags: string[]): string {
+  return [
+    caption.trim(),
+    "",
+    "── HASHTAGS ──",
+    hashtags.join(" "),
+    "",
+    "── PUBLICATION TIKTOK ──",
+    "1. Ouvre TikTok → Créer → Photo",
+    "2. Importe slide-1.jpg à slide-5.jpg dans l'ordre",
+    "3. Colle la légende ci-dessus",
+    "4. Publie",
+  ].join("\n");
+}
+
+function readmeDistribution(accountCount: number, conceptLabel: string): string {
+  return [
+    `Pack distribution Kognia — ${conceptLabel}`,
+    "",
+    `${accountCount} dossiers (compte-01 … compte-${String(accountCount).padStart(2, "0")})`,
+    "Chaque dossier = 1 compte TikTok avec visuels uniques (même texte, fond/couleurs différents).",
+    "",
+    "Workflow rapide :",
+    "• 1 dossier = 1 compte = 1 carrousel",
+    "• Ouvre caption.txt dans chaque dossier pour la légende",
+    "• Importe les 5 JPG dans TikTok dans l'ordre",
+  ].join("\n");
+}
+
+async function addConceptToZip(
+  zip: JSZip,
+  basePath: string,
+  input: DistributionPackInput,
+): Promise<void> {
+  const ordered = input.slides
+    .slice()
+    .sort((a, b) => a.slideNumber - b.slideNumber)
+    .slice(0, 5);
+
+  const profiles = buildVariantProfiles(input.accountCount);
+  const totalSteps = input.accountCount * ordered.length;
+  let done = 0;
+
+  zip.file(
+    `${basePath}/README.txt`,
+    readmeDistribution(input.accountCount, input.conceptLabel ?? input.topicTitle),
+  );
+
+  for (const profile of profiles) {
+    const folder = `${basePath}/${accountFolderName(profile.index)}`;
+    zip.file(`${folder}/caption.txt`, captionFile(input.caption, input.hashtags));
+
+    for (const slide of ordered) {
+      const canvas = await renderSlideToCanvas(slide, profile);
+      const blob = await canvasToBlob(canvas, "image/jpeg", profile.jpegQuality);
+      zip.file(`${folder}/slide-${slide.slideNumber}.jpg`, blob);
+      done += 1;
+      input.onProgress?.(done, totalSteps);
+    }
+  }
+}
+
+export async function downloadDistributionPack(
+  input: DistributionPackInput,
+): Promise<void> {
+  const [{ default: JSZip }, { saveAs }] = await Promise.all([
+    import("jszip"),
+    import("file-saver"),
+  ]);
+
+  const zip = new JSZip();
+  const slug = slugify(input.topicTitle) || "carrousel";
+
+  await addConceptToZip(zip, slug, input);
+
+  const archive = await zip.generateAsync({ type: "blob" });
+  saveAs(archive, `${slug}-distribution-${input.accountCount}comptes.zip`);
+}
+
+export async function downloadDailyPack(
+  concepts: DailyPackConcept[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<void> {
+  const [{ default: JSZip }, { saveAs }] = await Promise.all([
+    import("jszip"),
+    import("file-saver"),
+  ]);
+
+  const zip = new JSZip();
+  const date = new Date().toISOString().slice(0, 10);
+  const root = `pack-journalier-${date}`;
+
+  const totalSteps = concepts.reduce(
+    (sum, c) => sum + c.accountCount * 5,
+    0,
+  );
+
+  zip.file(
+    `${root}/README.txt`,
+    [
+      `Pack journalier Kognia — ${date}`,
+      "",
+      `${concepts.length} concept(s), ${concepts.reduce((s, c) => s + c.accountCount, 0)} comptes au total`,
+      "",
+      "Structure : concept-XX-nom/compte-YY/",
+      "Chaque compte a ses propres visuels + caption.txt",
+    ].join("\n"),
+  );
+
+  let globalOffset = 0;
+
+  for (let i = 0; i < concepts.length; i += 1) {
+    const concept = concepts[i];
+    const conceptSlug = slugify(concept.topicTitle) || `concept-${i + 1}`;
+    const conceptPath = `${root}/concept-${String(i + 1).padStart(2, "0")}-${conceptSlug}`;
+    const conceptSteps = concept.accountCount * 5;
+
+    await addConceptToZip(zip, conceptPath, {
+      ...concept,
+      conceptLabel: concept.topicTitle,
+      onProgress: (done) => {
+        onProgress?.(globalOffset + done, totalSteps);
+      },
+    });
+
+    globalOffset += conceptSteps;
+  }
+
+  const archive = await zip.generateAsync({ type: "blob" });
+  saveAs(archive, `${root}.zip`);
 }
 
 export async function downloadSlidesZip(
@@ -214,7 +395,7 @@ export async function downloadSlidesZip(
 
   for (const slide of ordered) {
     const canvas = await renderSlideToCanvas(slide);
-    const blob = await canvasToBlob(canvas);
+    const blob = await canvasToBlob(canvas, "image/png", 1);
     zip.file(`slide-${slide.slideNumber}.png`, blob);
   }
 
@@ -235,4 +416,15 @@ export function slidesToExportFormat(
     title: slide.title,
     text: slide.text,
   }));
+}
+
+export function splitAccountsAcrossConcepts(
+  conceptCount: number,
+  totalAccounts: number,
+): number[] {
+  const base = Math.floor(totalAccounts / conceptCount);
+  const remainder = totalAccounts % conceptCount;
+  return Array.from({ length: conceptCount }, (_, i) =>
+    base + (i < remainder ? 1 : 0),
+  );
 }

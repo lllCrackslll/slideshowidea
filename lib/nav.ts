@@ -20,7 +20,7 @@ export type NavItem = {
 
 const TOOL_DESCRIPTIONS: Record<string, string> = {
   "/content-engine":
-    "Génère et exporte des carrousels TikTok study avec OpenAI.",
+    "Génère des carrousels et exporte un pack prêt pour 10–20 comptes TikTok.",
   "/repurpose":
     "Crée des variantes uniques de vidéos (filtres, metadata, watermark).",
   "/image-spoofer":

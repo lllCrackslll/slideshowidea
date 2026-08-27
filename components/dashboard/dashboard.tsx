@@ -10,7 +10,7 @@ export function Dashboard() {
   return (
     <ToolPage
       title="Dashboard"
-      subtitle="Suite d'outils inspirée de TikFusion — adaptée au web Kognia Studio."
+      subtitle="Carrousels TikTok en priorité — génère, exporte, publie sur plusieurs comptes."
     >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {DASHBOARD_TOOLS.map((tool) => {

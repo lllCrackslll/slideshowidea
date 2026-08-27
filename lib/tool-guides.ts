@@ -10,12 +10,12 @@ export const TOOL_GUIDES: Record<string, ToolGuide> = {
   "/content-engine": {
     status: "functional",
     statusHint:
-      "Génération OpenAI, édition, copie légende et export ZIP — nécessite OPENAI_API_KEY (.env.local ou Vercel).",
+      "Workflow distribution : génère 3 concepts, exporte un pack multi-comptes (visuels uniques/compte). Nécessite OPENAI_API_KEY.",
     steps: [
-      "Choisis Format (Story = récit long, Short = quelques mots/slide) et Thème (Motivation ou Conseil).",
-      "Clique Générer : l'API crée 5 slides 9:16 + légende + hashtags.",
-      "Édite le texte directement sur chaque slide dans l'aperçu.",
-      "Copie tout le texte ou télécharge le ZIP de PNG 1080×1920.",
+      "Clique « 3 concepts du jour » (Format Short recommandé pour le scroll).",
+      "Règle le nombre de comptes (10–20) et exporte le Pack journalier.",
+      "Chaque dossier compte-XX contient 5 JPG uniques + caption.txt prêt à coller.",
+      "Sur TikTok : Créer → Photo → importe slide-1 à slide-5 dans l'ordre.",
     ],
   },
   "/repurpose": {
