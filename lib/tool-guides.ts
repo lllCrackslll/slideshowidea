@@ -10,12 +10,12 @@ export const TOOL_GUIDES: Record<string, ToolGuide> = {
   "/content-engine": {
     status: "functional",
     statusHint:
-      "Workflow distribution : génère 3 concepts, exporte un pack multi-comptes (visuels uniques/compte). Nécessite OPENAI_API_KEY.",
+      "Workflow complet : 3 concepts, comptes nommés, planning horaire, checklist, b-roll perso, banque de hooks, historique local.",
     steps: [
-      "Clique « 3 concepts du jour » (Format Short recommandé pour le scroll).",
-      "Règle le nombre de comptes (10–20) et exporte le Pack journalier.",
-      "Chaque dossier compte-XX contient 5 JPG uniques + caption.txt prêt à coller.",
-      "Sur TikTok : Créer → Photo → importe slide-1 à slide-5 dans l'ordre.",
+      "Clique « 3 concepts du jour » puis nomme tes comptes TikTok.",
+      "Consulte le planning horaire et exporte le pack journalier.",
+      "Coche la checklist au fur et à mesure des publications.",
+      "Banque de hooks pour le slide 1 · b-roll perso pour des visuels uniques.",
     ],
   },
   "/repurpose": {

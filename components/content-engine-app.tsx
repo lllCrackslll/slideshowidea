@@ -171,6 +171,15 @@ export function ContentEngineApp() {
     }));
   }
 
+  function handleApplyHook(hook: string) {
+    const slide1 =
+      activeCarousel.slides.find((s) => s.slideNumber === 1) ??
+      activeCarousel.slides[0];
+    if (slide1) {
+      handleSlideChange(slide1.id, { text: hook });
+    }
+  }
+
   return (
     <div className="flex min-h-full flex-col">
       <Header
@@ -194,7 +203,7 @@ export function ContentEngineApp() {
 
       {carouselQueue.length > 1 ? (
         <div className="k-divider bg-white/50 backdrop-blur-sm">
-          <div className="mx-auto flex max-w-[1400px] flex-wrap gap-2 px-5 py-3">
+          <div className="mx-auto flex max-w-[1400px] flex-wrap gap-2 px-4 py-3 sm:px-5">
             {carouselQueue.map((item, index) => (
               <button
                 key={item.id}
@@ -210,11 +219,12 @@ export function ContentEngineApp() {
         </div>
       ) : null}
 
-      <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col gap-8 px-5 py-6">
+      <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col gap-6 px-4 py-5 sm:gap-8 sm:px-5 sm:py-6">
         <DistributionPanel
           carousel={activeCarousel}
           carouselQueue={carouselQueue}
           disabled={busy}
+          onApplyHook={handleApplyHook}
         />
 
         <SlidesPreview

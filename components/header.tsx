@@ -15,10 +15,10 @@ export function Header({
 }: HeaderProps) {
   return (
     <header className="k-divider bg-white/50 backdrop-blur-sm">
-      <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between gap-3 px-5">
-        <div className="flex items-center gap-3">
+      <div className="mx-auto flex max-w-[1400px] flex-col gap-2 px-4 py-3 sm:h-14 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5 sm:py-0">
+        <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-sm font-semibold tracking-tight text-[#1d1d1f]">
-            Kognia Content Engine
+            Content Engine
           </h1>
           <span className="k-badge">Distribution TikTok</span>
         </div>
@@ -27,19 +27,16 @@ export function Header({
             type="button"
             onClick={onDownloadZip}
             disabled={!canDownload || exporting}
-            className="k-btn-secondary h-8 px-2.5 text-[11px] disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 sm:text-xs"
+            className="k-btn-secondary h-9 w-full px-3 text-xs disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:w-auto"
           >
             {exporting ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
               <Download className="h-3.5 w-3.5" />
             )}
-            <span className="hidden sm:inline">Télécharger les 5 PNG (.zip)</span>
             <span className="sm:hidden">Export ZIP</span>
+            <span className="hidden sm:inline">Télécharger les 5 PNG (.zip)</span>
           </button>
-          <p className="hidden text-xs text-[#aeaeb2] lg:block">
-            Carrousels 9:16 · StudyTok
-          </p>
         </div>
       </div>
     </header>

@@ -3,6 +3,11 @@ import {
   buildVariantProfiles,
   type VariantProfile,
 } from "@/lib/carousel-variants";
+import { accountFolderSlug } from "@/lib/distribution/accounts";
+import {
+  brollPathForSlide,
+  getMergedBrollPools,
+} from "@/lib/broll/custom-broll";
 import type JSZip from "jszip";
 
 export type ExportSlide = {
@@ -17,6 +22,8 @@ export type DistributionPackInput = {
   caption: string;
   hashtags: string[];
   accountCount: number;
+  accountNames?: string[];
+  accountNameOffset?: number;
   conceptLabel?: string;
   onProgress?: (done: number, total: number) => void;
 };
@@ -27,6 +34,8 @@ export type DailyPackConcept = {
   hashtags: string[];
   slides: ExportSlide[];
   accountCount: number;
+  accountNames?: string[];
+  accountOffset?: number;
 };
 
 const WIDTH = 1080;
@@ -37,17 +46,6 @@ const STROKE_WIDTH = 14;
 const HORIZONTAL_PADDING = 96;
 const MAX_TEXT_WIDTH = WIDTH - HORIZONTAL_PADDING * 2;
 
-const BROLL_POOLS = {
-  hook: ["/broll/hook-1.jpg", "/broll/hook-2.jpg"],
-  content: [
-    "/broll/content-1.jpg",
-    "/broll/content-2.jpg",
-    "/broll/content-3.jpg",
-  ],
-  app: ["/broll/app-1.jpg", "/broll/app-2.jpg"],
-  cta: ["/broll/cta-1.jpg", "/broll/cta-2.jpg"],
-} as const;
-
 function seededRandom(seed: number): () => number {
   let state = seed % 2147483647;
   if (state <= 0) state += 2147483646;
@@ -57,15 +55,15 @@ function seededRandom(seed: number): () => number {
   };
 }
 
-function pickFromPool<T>(items: readonly T[], rand: () => number): T {
-  return items[Math.floor(rand() * items.length)];
-}
-
-function pickBrollPath(slideNumber: number, rand: () => number): string {
-  if (slideNumber === 1) return pickFromPool(BROLL_POOLS.hook, rand);
-  if (slideNumber === 4) return pickFromPool(BROLL_POOLS.app, rand);
-  if (slideNumber === 5) return pickFromPool(BROLL_POOLS.cta, rand);
-  return pickFromPool(BROLL_POOLS.content, rand);
+function resolveAccountFolder(
+  localIndex: number,
+  accountNames?: string[],
+  offset = 0,
+): string {
+  const globalIndex = offset + localIndex;
+  const name = accountNames?.[globalIndex]?.trim();
+  if (name) return accountFolderSlug(name, globalIndex);
+  return accountFolderName(globalIndex);
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -93,7 +91,8 @@ async function drawBackground(
   variant: VariantProfile,
 ): Promise<void> {
   const rand = seededRandom(variant.seed + slideNumber * 131);
-  const src = pickBrollPath(slideNumber, rand);
+  const pools = getMergedBrollPools();
+  const src = brollPathForSlide(slideNumber, pools, rand);
   const zoom = 1 + 0.01 + variant.zoomExtra + rand() * 0.04;
 
   try {
@@ -295,7 +294,11 @@ async function addConceptToZip(
   );
 
   for (const profile of profiles) {
-    const folder = `${basePath}/${accountFolderName(profile.index)}`;
+    const folder = `${basePath}/${resolveAccountFolder(
+      profile.index,
+      input.accountNames,
+      input.accountNameOffset ?? 0,
+    )}`;
     zip.file(`${folder}/caption.txt`, captionFile(input.caption, input.hashtags));
 
     for (const slide of ordered) {
@@ -365,6 +368,8 @@ export async function downloadDailyPack(
 
     await addConceptToZip(zip, conceptPath, {
       ...concept,
+      accountNames: concept.accountNames,
+      accountNameOffset: concept.accountOffset ?? 0,
       conceptLabel: concept.topicTitle,
       onProgress: (done) => {
         onProgress?.(globalOffset + done, totalSteps);

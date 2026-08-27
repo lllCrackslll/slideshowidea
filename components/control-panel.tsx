@@ -33,7 +33,7 @@ export function ControlPanel({
 }: ControlPanelProps) {
   return (
     <section className="k-divider bg-white/40 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-[1400px] flex-col gap-4 px-5 py-4">
+      <div className="mx-auto flex max-w-[1400px] flex-col gap-4 px-4 py-4 sm:px-5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="k-label">Format</span>
           <div className="flex flex-wrap items-center gap-1.5">
