@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { FileDropzone } from "@/components/shell/file-dropzone";
 import { ToolPage } from "@/components/shell/tool-page";
+import { ToolTutorial } from "@/components/shell/tool-tutorial";
 import {
   canvasToBlob,
   downloadBlob,
   loadImageFile,
 } from "@/lib/image-processing";
+import { getToolGuide } from "@/lib/tool-guides";
 
 export function ReducerTool() {
   const [quality, setQuality] = useState(70);
@@ -63,6 +65,10 @@ export function ReducerTool() {
 
       {busy ? <p className="mt-3 text-xs text-zinc-400">Traitement…</p> : null}
       {message ? <p className="mt-3 text-xs text-zinc-300">{message}</p> : null}
+
+      {getToolGuide("/reducer") ? (
+        <ToolTutorial guide={getToolGuide("/reducer")!} className="mt-6" />
+      ) : null}
     </ToolPage>
   );
 }

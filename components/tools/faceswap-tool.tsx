@@ -4,6 +4,8 @@ import { useState } from "react";
 import { FileDropzone } from "@/components/shell/file-dropzone";
 import { LimitationBanner } from "@/components/shell/limitation-banner";
 import { ToolPage } from "@/components/shell/tool-page";
+import { ToolTutorial } from "@/components/shell/tool-tutorial";
+import { getToolGuide } from "@/lib/tool-guides";
 
 export function FaceSwapTool() {
   const [source, setSource] = useState<File | null>(null);
@@ -53,6 +55,10 @@ export function FaceSwapTool() {
           Fichiers sélectionnés : {source?.name ?? "—"} → {target?.name ?? "—"}
         </p>
       )}
+
+      {getToolGuide("/faceswap") ? (
+        <ToolTutorial guide={getToolGuide("/faceswap")!} className="mt-6" />
+      ) : null}
     </ToolPage>
   );
 }

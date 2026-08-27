@@ -6,8 +6,10 @@ import { RepurposeSettingsPanel } from "@/components/repurpose/repurpose-setting
 import { FileDropzone } from "@/components/shell/file-dropzone";
 import { LimitationBanner } from "@/components/shell/limitation-banner";
 import { ToolPage } from "@/components/shell/tool-page";
+import { ToolTutorial } from "@/components/shell/tool-tutorial";
 import { useFfmpeg } from "@/hooks/use-ffmpeg";
 import { downloadBlob } from "@/lib/image-processing";
+import { getToolGuide } from "@/lib/tool-guides";
 import {
   DEFAULT_REPURPOSE_SETTINGS,
   allPresets,
@@ -220,6 +222,10 @@ export function RepurposeTool() {
           onWatermarkFile={setWatermarkFile}
         />
       </div>
+
+      {getToolGuide("/repurpose") ? (
+        <ToolTutorial guide={getToolGuide("/repurpose")!} className="mt-6" />
+      ) : null}
     </ToolPage>
   );
 }

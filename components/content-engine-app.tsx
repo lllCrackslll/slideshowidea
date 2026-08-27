@@ -17,6 +17,8 @@ import {
   downloadSlidesZip,
   slidesToExportFormat,
 } from "@/utils/generateSlides";
+import { ToolTutorial } from "@/components/shell/tool-tutorial";
+import { getToolGuide } from "@/lib/tool-guides";
 
 export function ContentEngineApp() {
   const [format, setFormat] = useState<FormatId>("story");
@@ -133,6 +135,12 @@ export function ContentEngineApp() {
             setCarousel((current) => ({ ...current, caption }))
           }
         />
+        {getToolGuide("/content-engine") ? (
+          <ToolTutorial
+            guide={getToolGuide("/content-engine")!}
+            className="mb-4"
+          />
+        ) : null}
       </main>
     </div>
   );

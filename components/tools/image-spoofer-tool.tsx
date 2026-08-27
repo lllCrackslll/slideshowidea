@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { FileDropzone } from "@/components/shell/file-dropzone";
 import { ToolPage } from "@/components/shell/tool-page";
+import { ToolTutorial } from "@/components/shell/tool-tutorial";
 import {
   DEFAULT_ADJUSTMENTS,
   canvasToBlob,
@@ -11,6 +12,7 @@ import {
   loadImageFile,
   type ImageAdjustments,
 } from "@/lib/image-processing";
+import { getToolGuide } from "@/lib/tool-guides";
 
 type SpooferTab = "simple" | "advanced";
 
@@ -189,6 +191,13 @@ export function ImageSpooferTool() {
           )}
         </div>
       </div>
+
+      {getToolGuide("/image-spoofer") ? (
+        <ToolTutorial
+          guide={getToolGuide("/image-spoofer")!}
+          className="mt-6"
+        />
+      ) : null}
     </ToolPage>
   );
 }

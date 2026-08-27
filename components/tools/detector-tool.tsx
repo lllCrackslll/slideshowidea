@@ -4,7 +4,9 @@ import { useState } from "react";
 import { FileDropzone } from "@/components/shell/file-dropzone";
 import { LimitationBanner } from "@/components/shell/limitation-banner";
 import { ToolPage } from "@/components/shell/tool-page";
+import { ToolTutorial } from "@/components/shell/tool-tutorial";
 import { compareImagesSimilarity } from "@/lib/image-processing";
+import { getToolGuide } from "@/lib/tool-guides";
 
 export function DetectorTool() {
   const [fileA, setFileA] = useState<File | null>(null);
@@ -96,6 +98,10 @@ export function DetectorTool() {
                 : "Plutôt différents."}
           </p>
         </div>
+      ) : null}
+
+      {getToolGuide("/detector") ? (
+        <ToolTutorial guide={getToolGuide("/detector")!} className="mt-6" />
       ) : null}
     </ToolPage>
   );

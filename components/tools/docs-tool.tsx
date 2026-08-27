@@ -1,4 +1,6 @@
 import { ToolPage } from "@/components/shell/tool-page";
+import { ToolTutorial } from "@/components/shell/tool-tutorial";
+import { getToolGuide } from "@/lib/tool-guides";
 
 const SECTIONS = [
   {
@@ -51,6 +53,10 @@ export function DocsTool() {
           </article>
         ))}
       </div>
+
+      {getToolGuide("/docs") ? (
+        <ToolTutorial guide={getToolGuide("/docs")!} className="mt-6" />
+      ) : null}
     </ToolPage>
   );
 }

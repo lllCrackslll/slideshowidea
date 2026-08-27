@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { FileDropzone } from "@/components/shell/file-dropzone";
 import { ToolPage } from "@/components/shell/tool-page";
+import { ToolTutorial } from "@/components/shell/tool-tutorial";
 import { useFfmpeg } from "@/hooks/use-ffmpeg";
+import { getToolGuide } from "@/lib/tool-guides";
 import {
   canvasToBlob,
   downloadBlob,
@@ -135,6 +137,10 @@ export function ConverterTool() {
         <p className="mt-1 truncate text-[10px] text-zinc-600">{log}</p>
       ) : null}
       {message ? <p className="mt-3 text-xs text-zinc-300">{message}</p> : null}
+
+      {getToolGuide("/converter") ? (
+        <ToolTutorial guide={getToolGuide("/converter")!} className="mt-6" />
+      ) : null}
     </ToolPage>
   );
 }
