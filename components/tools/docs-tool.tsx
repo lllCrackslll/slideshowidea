@@ -44,10 +44,10 @@ export function DocsTool() {
         {SECTIONS.map((section) => (
           <article
             key={section.title}
-            className="rounded-xl border border-[#27272a] bg-[#0c0c0e] p-4"
+            className="k-card"
           >
-            <h2 className="text-sm font-medium text-zinc-100">{section.title}</h2>
-            <p className="mt-2 text-xs leading-relaxed text-zinc-400">
+            <h2 className="text-sm font-medium text-[#1d1d1f]">{section.title}</h2>
+            <p className="mt-2 text-xs leading-relaxed text-[#86868b]">
               {section.body}
             </p>
           </article>

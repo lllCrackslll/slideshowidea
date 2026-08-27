@@ -118,12 +118,12 @@ export function RepurposeTool() {
       </LimitationBanner>
 
       <div className="mb-4 flex flex-wrap items-end gap-2">
-        <label className="text-xs text-zinc-400">
+        <label className="text-xs text-[#86868b]">
           Preset
           <select
             value={presetName}
             onChange={(e) => applyPreset(e.target.value)}
-            className="mt-1 block h-9 min-w-[160px] rounded-lg border border-[#27272a] bg-[#0c0c0e] px-2 text-sm text-zinc-100"
+            className="k-input mt-1 block h-9 min-w-[160px] text-sm"
           >
             {Object.keys(presets).map((name) => (
               <option key={name} value={name}>
@@ -132,26 +132,26 @@ export function RepurposeTool() {
             ))}
           </select>
         </label>
-        <label className="text-xs text-zinc-400">
+        <label className="text-xs text-[#86868b]">
           Sauver preset as
           <input
             value={customPresetName}
             onChange={(e) => setCustomPresetName(e.target.value)}
             placeholder="Mon preset"
-            className="mt-1 block h-9 w-36 rounded-lg border border-[#27272a] bg-transparent px-2 text-sm text-zinc-100"
+            className="mt-1 block h-9 w-36 k-input px-2 text-sm text-[#1d1d1f]"
           />
         </label>
         <button
           type="button"
           onClick={handleSavePreset}
-          className="h-9 rounded-lg border border-[#27272a] px-3 text-xs text-zinc-300 hover:bg-white/[0.03]"
+          className="k-btn-secondary h-9 px-3 text-xs"
         >
           Sauvegarder
         </button>
         <button
           type="button"
           onClick={handleDeletePreset}
-          className="h-9 rounded-lg border border-[#27272a] px-3 text-xs text-zinc-500 hover:bg-white/[0.03]"
+          className="k-btn-secondary h-9 px-3 text-xs text-[#86868b]"
         >
           Supprimer preset
         </button>
@@ -167,7 +167,7 @@ export function RepurposeTool() {
             onFiles={(picked) => setFiles(picked)}
           />
           {files.length > 0 ? (
-            <ul className="space-y-1 text-[10px] text-zinc-600">
+            <ul className="space-y-1 text-[10px] text-[#aeaeb2]">
               {files.map((f) => (
                 <li key={f.name} className="truncate">
                   {f.name}
@@ -176,7 +176,7 @@ export function RepurposeTool() {
             </ul>
           ) : null}
 
-          <label className="block text-xs text-zinc-400">
+          <label className="block text-xs text-[#86868b]">
             Copies par vidéo
             <input
               type="number"
@@ -184,7 +184,7 @@ export function RepurposeTool() {
               max={10}
               value={copies}
               onChange={(e) => setCopies(Number(e.target.value))}
-              className="mt-1 h-9 w-full rounded-lg border border-[#27272a] bg-transparent px-2 text-zinc-100"
+              className="mt-1 h-9 w-full k-input px-2 text-[#1d1d1f]"
             />
           </label>
 
@@ -192,7 +192,7 @@ export function RepurposeTool() {
             type="button"
             disabled={busy || loading}
             onClick={handleGenerate}
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-zinc-100 text-sm font-medium text-zinc-950 disabled:opacity-50"
+            className="k-btn-primary h-10 w-full disabled:opacity-50"
           >
             {busy || loading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -203,15 +203,15 @@ export function RepurposeTool() {
           </button>
 
           {(busy || loading) && (
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-[#86868b]">
               {loading ? "Chargement FFmpeg…" : `Traitement… ${progress}%`}
             </p>
           )}
           {log ? (
-            <p className="truncate text-[10px] text-zinc-600">{log}</p>
+            <p className="truncate text-[10px] text-[#aeaeb2]">{log}</p>
           ) : null}
           {message ? (
-            <p className="text-xs text-zinc-300">{message}</p>
+            <p className="text-xs text-[#424245]">{message}</p>
           ) : null}
         </div>
 

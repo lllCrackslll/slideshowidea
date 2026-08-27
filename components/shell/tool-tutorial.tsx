@@ -6,18 +6,18 @@ const STATUS_STYLES: Record<
 > = {
   functional: {
     label: "Fonctionnel",
-    badge: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
-    dot: "bg-emerald-400",
+    badge: "k-status-functional",
+    dot: "bg-[#007aff]",
   },
   partial: {
     label: "Partiel",
-    badge: "border-amber-500/30 bg-amber-500/10 text-amber-400",
-    dot: "bg-amber-400",
+    badge: "k-status-partial",
+    dot: "bg-amber-500",
   },
   unavailable: {
     label: "Non disponible",
-    badge: "border-red-500/30 bg-red-500/10 text-red-400",
-    dot: "bg-red-400",
+    badge: "k-status-unavailable",
+    dot: "bg-red-500",
   },
 };
 
@@ -35,9 +35,7 @@ export function ToolTutorial({
   const status = STATUS_STYLES[guide.status];
 
   return (
-    <div
-      className={`rounded-xl border border-[#27272a] bg-[#0c0c0e] p-3 ${className}`}
-    >
+    <div className={`k-card ${className}`}>
       <div className="flex flex-wrap items-center gap-2">
         <span
           className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium ${status.badge}`}
@@ -46,14 +44,12 @@ export function ToolTutorial({
           {status.label}
         </span>
         {!compact ? (
-          <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-600">
-            Mode d&apos;emploi
-          </span>
+          <span className="k-label">Mode d&apos;emploi</span>
         ) : null}
       </div>
 
       {!compact ? (
-        <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
+        <p className="mt-2 text-[11px] leading-relaxed text-[#86868b]">
           {guide.statusHint}
         </p>
       ) : null}
@@ -62,9 +58,9 @@ export function ToolTutorial({
         {guide.steps.slice(0, compact ? 2 : undefined).map((step, i) => (
           <li
             key={step}
-            className="flex gap-2 text-[11px] leading-relaxed text-zinc-400"
+            className="flex gap-2 text-[11px] leading-relaxed text-[#6e6e73]"
           >
-            <span className="shrink-0 text-zinc-600">{i + 1}.</span>
+            <span className="shrink-0 text-[#aeaeb2]">{i + 1}.</span>
             <span>{step}</span>
           </li>
         ))}

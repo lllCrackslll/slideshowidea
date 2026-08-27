@@ -91,15 +91,13 @@ export function ConverterTool() {
 
   return (
     <ToolPage title="Converter" subtitle="Convertit images, vidéos et GIF.">
-      <div className="mb-4 flex gap-1 rounded-full bg-white/[0.04] p-1">
+      <div className="mb-4 k-tab-bar">
         {tabs.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`flex-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-              tab === t.id ? "bg-white/10 text-zinc-100" : "text-zinc-500"
-            }`}
+            className={`k-tab ${tab === t.id ? "k-tab-active" : ""}`}
           >
             {t.label}
           </button>
@@ -107,7 +105,7 @@ export function ConverterTool() {
       </div>
 
       {tab !== "image" ? (
-        <p className="mb-4 text-xs text-zinc-500">
+        <p className="mb-4 text-xs text-[#86868b]">
           FFmpeg WASM — premier chargement ~30 Mo. Vidéos courtes recommandées.
         </p>
       ) : null}
@@ -129,14 +127,14 @@ export function ConverterTool() {
       />
 
       {(busy || loading) && (
-        <p className="mt-3 text-xs text-zinc-400">
+        <p className="mt-3 text-xs text-[#86868b]">
           {loading ? "Chargement FFmpeg…" : `Traitement… ${progress}%`}
         </p>
       )}
       {log && tab !== "image" ? (
-        <p className="mt-1 truncate text-[10px] text-zinc-600">{log}</p>
+        <p className="mt-1 truncate text-[10px] text-[#aeaeb2]">{log}</p>
       ) : null}
-      {message ? <p className="mt-3 text-xs text-zinc-300">{message}</p> : null}
+      {message ? <p className="mt-3 text-xs text-[#424245]">{message}</p> : null}
 
       {getToolGuide("/converter") ? (
         <ToolTutorial guide={getToolGuide("/converter")!} className="mt-6" />

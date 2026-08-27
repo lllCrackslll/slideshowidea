@@ -25,7 +25,7 @@ export function FaceSwapTool() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <p className="mb-2 text-xs text-zinc-500">Visage source</p>
+          <p className="mb-2 text-xs text-[#86868b]">Visage source</p>
           <FileDropzone
             accept="image/png,image/jpeg"
             label="Image source (visage)"
@@ -33,7 +33,7 @@ export function FaceSwapTool() {
           />
         </div>
         <div>
-          <p className="mb-2 text-xs text-zinc-500">Cible</p>
+          <p className="mb-2 text-xs text-[#86868b]">Cible</p>
           <FileDropzone
             accept="image/png,image/jpeg,video/mp4"
             label="Image ou vidéo cible (≤ 15 s)"
@@ -45,13 +45,13 @@ export function FaceSwapTool() {
       <button
         type="button"
         disabled
-        className="mt-4 h-10 cursor-not-allowed rounded-lg bg-zinc-800 px-4 text-sm text-zinc-500"
+        className="mt-4 h-10 cursor-not-allowed rounded-xl border border-[rgba(0,122,255,0.1)] bg-[#f5f5f7] px-4 text-sm text-[#aeaeb2]"
       >
         API Face Swap non configurée
       </button>
 
       {(source || target) && (
-        <p className="mt-3 text-xs text-zinc-600">
+        <p className="mt-3 text-xs text-[#aeaeb2]">
           Fichiers sélectionnés : {source?.name ?? "—"} → {target?.name ?? "—"}
         </p>
       )}

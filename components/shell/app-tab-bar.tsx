@@ -8,11 +8,11 @@ export function AppTabBar() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[#27272a] bg-[#09090b]/95 backdrop-blur-md">
+    <header className="k-nav">
       <div className="mx-auto flex h-12 max-w-[1600px] items-center gap-4 px-4">
         <Link
           href="/"
-          className="shrink-0 text-xs font-medium tracking-tight text-zinc-100"
+          className="shrink-0 text-xs font-semibold tracking-tight text-[#1d1d1f]"
         >
           Kognia Studio
         </Link>
@@ -27,11 +27,7 @@ export function AppTabBar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] transition-colors sm:text-xs ${
-                  active
-                    ? "bg-zinc-100 font-medium text-zinc-950"
-                    : "text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200"
-                }`}
+                className={`k-nav-link ${active ? "k-nav-link-active" : ""}`}
               >
                 <Icon className="hidden h-3.5 w-3.5 sm:block" />
                 {item.label}

@@ -40,15 +40,11 @@ export function FileDropzone({
         setDragging(false);
         handleFiles(e.dataTransfer.files);
       }}
-      className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed px-6 py-10 transition-colors ${
-        dragging
-          ? "border-zinc-400 bg-white/[0.04]"
-          : "border-[#27272a] bg-[#0c0c0e] hover:border-zinc-600"
-      }`}
+      className={`k-dropzone ${dragging ? "k-dropzone-active" : ""}`}
     >
-      <Upload className="mb-3 h-8 w-8 text-zinc-500" />
-      <p className="text-sm font-medium text-zinc-200">{label}</p>
-      <p className="mt-1 text-xs text-zinc-500">{hint}</p>
+      <Upload className="mb-3 h-8 w-8 text-[#007aff]" />
+      <p className="text-sm font-medium text-[#1d1d1f]">{label}</p>
+      <p className="mt-1 text-xs text-[#86868b]">{hint}</p>
       <input
         type="file"
         accept={accept}

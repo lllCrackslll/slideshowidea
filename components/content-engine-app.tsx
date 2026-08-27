@@ -193,18 +193,14 @@ export function ContentEngineApp() {
       />
 
       {carouselQueue.length > 1 ? (
-        <div className="border-b border-[#27272a] bg-[#0c0c0e]/50">
+        <div className="k-divider bg-white/50 backdrop-blur-sm">
           <div className="mx-auto flex max-w-[1400px] flex-wrap gap-2 px-5 py-3">
             {carouselQueue.map((item, index) => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => selectConcept(index)}
-                className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
-                  index === activeConcept
-                    ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
-                    : "border-[#27272a] text-zinc-500 hover:text-zinc-300"
-                }`}
+                className={`k-chip ${index === activeConcept ? "k-chip-active" : ""}`}
               >
                 Concept {index + 1} · {item.topic.slice(0, 28)}
                 {item.topic.length > 28 ? "…" : ""}

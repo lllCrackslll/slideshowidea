@@ -31,7 +31,7 @@ function SliderRow({
 }) {
   return (
     <label className="block">
-      <div className="mb-1 flex justify-between text-xs text-zinc-400">
+      <div className="mb-1 flex justify-between text-xs text-[#86868b]">
         <span>{label}</span>
         <span>{value}</span>
       </div>
@@ -41,7 +41,7 @@ function SliderRow({
         max={max}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-zinc-100"
+        className="w-full accent-[#007aff]"
       />
     </label>
   );
@@ -94,15 +94,13 @@ export function ImageSpooferTool() {
       title="Image Spoofer"
       subtitle="Transforme des images pour créer des variantes uniques."
     >
-      <div className="mb-4 flex gap-1 rounded-full bg-white/[0.04] p-1">
+      <div className="mb-4 k-tab-bar">
         {(["simple", "advanced"] as const).map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className={`flex-1 rounded-full px-3 py-1.5 text-xs font-medium capitalize ${
-              tab === t ? "bg-white/10 text-zinc-100" : "text-zinc-500"
-            }`}
+            className={`k-tab capitalize ${tab === t ? "k-tab-active" : ""}`}
           >
             {t === "simple" ? "Simple" : "Advanced"}
           </button>
@@ -116,7 +114,7 @@ export function ImageSpooferTool() {
             label="Image source"
             onFiles={handleFile}
           />
-          <div className="space-y-3 rounded-xl border border-[#27272a] bg-[#0c0c0e] p-4">
+          <div className="k-card space-y-3">
             {simpleSliders.map((key) => (
               <SliderRow
                 key={key}
@@ -150,7 +148,7 @@ export function ImageSpooferTool() {
                   value={adjustments.blurBorder}
                   onChange={(v) => patch({ blurBorder: v })}
                 />
-                <label className="flex items-center gap-2 text-xs text-zinc-400">
+                <label className="flex items-center gap-2 text-xs text-[#86868b]">
                   <input
                     type="checkbox"
                     checked={adjustments.flipH}
@@ -158,7 +156,7 @@ export function ImageSpooferTool() {
                   />
                   Flip horizontal
                 </label>
-                <label className="flex items-center gap-2 text-xs text-zinc-400">
+                <label className="flex items-center gap-2 text-xs text-[#86868b]">
                   <input
                     type="checkbox"
                     checked={adjustments.flipV}
@@ -173,12 +171,12 @@ export function ImageSpooferTool() {
             type="button"
             disabled={!file || busy}
             onClick={exportImage}
-            className="h-10 w-full rounded-lg bg-zinc-100 text-sm font-medium text-zinc-950 disabled:opacity-50"
+            className="h-10 w-full k-btn-primary disabled:opacity-50"
           >
             Exporter l&apos;image
           </button>
         </div>
-        <div className="flex min-h-[280px] items-center justify-center rounded-xl border border-[#27272a] bg-[#0c0c0e] p-4">
+        <div className="k-card flex min-h-[280px] items-center justify-center">
           {preview ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -187,7 +185,7 @@ export function ImageSpooferTool() {
               className="max-h-[420px] max-w-full rounded-lg object-contain"
             />
           ) : (
-            <p className="text-xs text-zinc-600">Aperçu ici</p>
+            <p className="text-xs text-[#aeaeb2]">Aperçu ici</p>
           )}
         </div>
       </div>

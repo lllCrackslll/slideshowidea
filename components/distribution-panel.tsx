@@ -100,23 +100,19 @@ export function DistributionPanel({
     : null;
 
   return (
-    <section className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-4">
+    <section className="k-card-glow">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-medium text-zinc-100">
-            Distribution TikTok
-          </h2>
-          <p className="mt-1 text-xs text-zinc-500">
+          <h2 className="k-subheading">Distribution TikTok</h2>
+          <p className="mt-1 text-xs text-[#86868b]">
             1 dossier = 1 compte. Visuels uniques par compte, même texte.
           </p>
         </div>
-        <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
-          Workflow carrousel
-        </span>
+        <span className="k-badge">Workflow carrousel</span>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
-        <label className="block text-xs text-zinc-400">
+        <label className="block text-xs text-[#86868b]">
           Nombre de comptes
           <div className="mt-2 flex items-center gap-3">
             <input
@@ -125,14 +121,14 @@ export function DistributionPanel({
               max={20}
               value={accountCount}
               onChange={(e) => setAccountCount(Number(e.target.value))}
-              className="w-full max-w-xs accent-emerald-400"
+              className="w-full max-w-xs accent-[#007aff]"
             />
-            <span className="w-8 text-sm font-medium text-zinc-200">
+            <span className="w-8 text-sm font-semibold text-[#1d1d1f]">
               {accountCount}
             </span>
           </div>
           {splitPreview ? (
-            <p className="mt-1 text-[11px] text-zinc-600">
+            <p className="mt-1 text-[11px] text-[#aeaeb2]">
               Répartition :{" "}
               {splitPreview
                 .map((n, i) => `Concept ${i + 1} → ${n} comptes`)
@@ -142,25 +138,17 @@ export function DistributionPanel({
         </label>
 
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={copyCaption}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#27272a] px-3 text-xs text-zinc-300 hover:bg-white/[0.03]"
-          >
+          <button type="button" onClick={copyCaption} className="k-btn-secondary h-9 px-3 text-xs">
             {copied === "caption" ? (
-              <Check className="h-3.5 w-3.5" />
+              <Check className="h-3.5 w-3.5 text-[#007aff]" />
             ) : (
               <Copy className="h-3.5 w-3.5" />
             )}
             Légende
           </button>
-          <button
-            type="button"
-            onClick={copyHashtags}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#27272a] px-3 text-xs text-zinc-300 hover:bg-white/[0.03]"
-          >
+          <button type="button" onClick={copyHashtags} className="k-btn-secondary h-9 px-3 text-xs">
             {copied === "hashtags" ? (
-              <Check className="h-3.5 w-3.5" />
+              <Check className="h-3.5 w-3.5 text-[#007aff]" />
             ) : (
               <Copy className="h-3.5 w-3.5" />
             )}
@@ -174,7 +162,7 @@ export function DistributionPanel({
           type="button"
           disabled={disabled || exporting || carousel.slides.length !== 5}
           onClick={exportSinglePack}
-          className="inline-flex h-10 items-center gap-2 rounded-lg bg-emerald-500 px-4 text-sm font-medium text-zinc-950 disabled:opacity-50"
+          className="k-btn-primary h-10 disabled:opacity-50"
         >
           {exporting && !hasQueue ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -189,7 +177,7 @@ export function DistributionPanel({
             type="button"
             disabled={disabled || exporting}
             onClick={exportDailyPack}
-            className="inline-flex h-10 items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 text-sm font-medium text-emerald-300 disabled:opacity-50"
+            className="k-btn-accent h-10 disabled:opacity-50"
           >
             {exporting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -202,17 +190,17 @@ export function DistributionPanel({
       </div>
 
       {progress ? (
-        <p className="mt-3 text-xs text-zinc-400">{progress}</p>
+        <p className="mt-3 text-xs text-[#007aff]">{progress}</p>
       ) : null}
 
-      <ol className="mt-4 space-y-1 border-t border-[#27272a] pt-3">
+      <ol className="mt-4 space-y-1 border-t border-[rgba(0,122,255,0.1)] pt-3">
         {[
           "Génère 1 à 3 concepts (texte différent par concept).",
           "Exporte le pack — chaque compte reçoit 5 JPG uniques + caption.txt.",
           "Sur TikTok : Créer → Photo → importe slide-1 à slide-5 → colle la légende.",
         ].map((step, i) => (
-          <li key={step} className="flex gap-2 text-[11px] text-zinc-500">
-            <span className="text-zinc-600">{i + 1}.</span>
+          <li key={step} className="flex gap-2 text-[11px] text-[#86868b]">
+            <span className="text-[#aeaeb2]">{i + 1}.</span>
             {step}
           </li>
         ))}

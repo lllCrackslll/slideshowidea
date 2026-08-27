@@ -20,13 +20,13 @@ export function Dashboard() {
             <Link
               key={tool.href}
               href={tool.href}
-              className="group flex flex-col rounded-xl border border-[#27272a] bg-[#0c0c0e] p-4 transition-colors hover:border-zinc-600 hover:bg-[#101012]"
+              className="k-link-card group flex flex-col"
             >
-              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-white/[0.06] text-zinc-200 group-hover:bg-white/[0.1]">
+              <div className="k-icon-box mb-3 group-hover:bg-[rgba(0,122,255,0.14)]">
                 <Icon className="h-4 w-4" />
               </div>
-              <h2 className="text-sm font-medium text-zinc-100">{tool.label}</h2>
-              <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+              <h2 className="k-subheading">{tool.label}</h2>
+              <p className="mt-1 text-xs leading-relaxed text-[#86868b]">
                 {tool.description}
               </p>
               {guide ? (

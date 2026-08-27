@@ -105,7 +105,7 @@ export function RepurposeSettingsPanel({
       </div>
 
       {settings.dimensionsEnabled ? (
-        <label className="block text-xs text-zinc-400">
+        <label className="block text-xs text-[#86868b]">
           Dimensions (WxH)
           <input
             value={settings.dimensionsInput}
@@ -113,12 +113,12 @@ export function RepurposeSettingsPanel({
               onChange({ ...settings, dimensionsInput: e.target.value })
             }
             placeholder="1080x1920"
-            className="mt-1 h-9 w-full max-w-xs rounded-lg border border-[#27272a] bg-transparent px-2 text-zinc-100"
+            className="mt-1 h-9 w-full max-w-xs k-input px-2 text-[#1d1d1f]"
           />
         </label>
       ) : null}
 
-      <div className="rounded-xl border border-[#27272a] bg-[#0c0c0e] p-3">
+      <div className="k-card">
         <ToggleRow
           label="Watermark"
           checked={settings.watermarkEnabled}
@@ -126,16 +126,16 @@ export function RepurposeSettingsPanel({
         />
         {settings.watermarkEnabled ? (
           <div className="mt-3 space-y-2">
-            <label className="block text-xs text-zinc-400">
+            <label className="block text-xs text-[#86868b]">
               Image watermark
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
                 onChange={(e) => onWatermarkFile(e.target.files?.[0] ?? null)}
-                className="mt-1 block w-full text-xs text-zinc-500"
+                className="mt-1 block w-full text-xs text-[#86868b]"
               />
               {watermarkFile ? (
-                <span className="text-zinc-600">{watermarkFile.name}</span>
+                <span className="text-[#aeaeb2]">{watermarkFile.name}</span>
               ) : null}
             </label>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -184,12 +184,12 @@ function ToggleRow({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <label className="flex items-center gap-2 rounded-lg border border-[#27272a] bg-[#0c0c0e] px-3 py-2 text-xs text-zinc-300">
+    <label className="flex items-center gap-2 rounded-xl border border-[rgba(0,122,255,0.12)] bg-white/80 px-3 py-2 text-xs text-[#424245]">
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="accent-zinc-100"
+        className="accent-[#007aff]"
       />
       {label}
     </label>
@@ -208,14 +208,14 @@ function NumField({
   onChange: (v: number) => void;
 }) {
   return (
-    <label className="text-[10px] text-zinc-500">
+    <label className="text-[10px] text-[#86868b]">
       {label}
       <input
         type="number"
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-0.5 h-7 w-full rounded border border-[#27272a] bg-transparent px-1.5 text-xs text-zinc-200"
+        className="k-input mt-0.5 h-7 w-full px-1.5 text-xs"
       />
     </label>
   );
