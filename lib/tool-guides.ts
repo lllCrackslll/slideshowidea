@@ -26,7 +26,7 @@ export const TOOL_GUIDES: Record<string, ToolGuide> = {
       "Choisis un preset (Instagram, TikTok) ou ajuste les filtres à droite.",
       "Dépose une ou plusieurs vidéos MP4/MOV/MKV.",
       "Règle le nombre de copies par fichier et ajoute un watermark si besoin.",
-      "Clique Générer les variantes — un ZIP avec tous les MP4 se télécharge.",
+      "Clique Générer — liste des vidéos cliquables, puis ZIP en bas.",
     ],
   },
   "/planning": {

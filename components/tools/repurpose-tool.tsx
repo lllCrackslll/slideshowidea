@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Loader2, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Loader2, Package, Sparkles } from "lucide-react";
 import { RepurposeSettingsPanel } from "@/components/repurpose/repurpose-settings-panel";
 import { FileDropzone } from "@/components/shell/file-dropzone";
 import { ToolPage } from "@/components/shell/tool-page";
 import { ToolTutorial } from "@/components/shell/tool-tutorial";
 import { useFfmpeg } from "@/hooks/use-ffmpeg";
+import { downloadBlob } from "@/lib/image-processing";
 import {
   downloadRepurposeZip,
   type RepurposeZipEntry,
@@ -20,6 +21,19 @@ import {
 } from "@/lib/repurpose/presets";
 import type { RepurposeSettings } from "@/lib/repurpose/types";
 
+type GeneratedVideo = {
+  id: string;
+  filename: string;
+  blob: Blob;
+  url: string;
+};
+
+function releaseResults(results: GeneratedVideo[]): void {
+  for (const item of results) {
+    URL.revokeObjectURL(item.url);
+  }
+}
+
 export function RepurposeTool() {
   const [settings, setSettings] = useState<RepurposeSettings>(
     DEFAULT_REPURPOSE_SETTINGS,
@@ -31,10 +45,26 @@ export function RepurposeTool() {
   const [copies, setCopies] = useState(1);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [results, setResults] = useState<GeneratedVideo[]>([]);
+  const [zipLabel, setZipLabel] = useState("repurpose");
+  const [downloadingZip, setDownloadingZip] = useState(false);
 
   const { loading, progress, log, repurpose, load } = useFfmpeg();
+  const resultsRef = useRef(results);
+  resultsRef.current = results;
 
   const presets = useMemo(() => allPresets(), [presetName, customPresetName]);
+
+  useEffect(() => {
+    return () => releaseResults(resultsRef.current);
+  }, []);
+
+  function clearResults() {
+    setResults((current) => {
+      releaseResults(current);
+      return [];
+    });
+  }
 
   async function handleGenerate() {
     if (!files.length) {
@@ -48,12 +78,13 @@ export function RepurposeTool() {
 
     setBusy(true);
     setMessage(null);
+    clearResults();
 
     try {
       await load();
       let done = 0;
       const total = files.length * copies;
-      const zipEntries: RepurposeZipEntry[] = [];
+      const generated: GeneratedVideo[] = [];
 
       for (const file of files) {
         const base = file.name.replace(/\.[^.]+$/, "");
@@ -65,20 +96,25 @@ export function RepurposeTool() {
             `out-${Date.now()}-${i}.mp4`,
           );
           const suffix = String.fromCharCode(97 + (i % 26));
-          zipEntries.push({
-            filename: `${base}-repurpose-${suffix}.mp4`,
+          const filename = `${base}-repurpose-${suffix}.mp4`;
+          generated.push({
+            id: `${filename}-${Date.now()}-${i}`,
+            filename,
             blob,
+            url: URL.createObjectURL(blob),
           });
           done += 1;
           setMessage(`Variante ${done}/${total}…`);
         }
       }
 
-      await downloadRepurposeZip(
-        zipEntries,
-        files.length === 1 ? files[0].name.replace(/\.[^.]+$/, "") : "repurpose",
+      setResults(generated);
+      setZipLabel(
+        files.length === 1
+          ? files[0].name.replace(/\.[^.]+$/, "")
+          : "repurpose",
       );
-      setMessage(`Pack ZIP prêt — ${total} variante(s).`);
+      setMessage(`${total} variante(s) prête(s) — télécharge une vidéo ou le ZIP.`);
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -87,6 +123,20 @@ export function RepurposeTool() {
       );
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleDownloadZip() {
+    if (!results.length) return;
+    setDownloadingZip(true);
+    try {
+      const entries: RepurposeZipEntry[] = results.map((item) => ({
+        filename: item.filename,
+        blob: item.blob,
+      }));
+      await downloadRepurposeZip(entries, zipLabel);
+    } finally {
+      setDownloadingZip(false);
     }
   }
 
@@ -167,7 +217,10 @@ export function RepurposeTool() {
             multiple
             label="Vidéos (multi)"
             hint="MP4, MOV, MKV"
-            onFiles={(picked) => setFiles(picked)}
+            onFiles={(picked) => {
+              setFiles(picked);
+              clearResults();
+            }}
           />
           {files.length > 0 ? (
             <ul className="space-y-1 text-[10px] text-[#aeaeb2]">
@@ -225,6 +278,48 @@ export function RepurposeTool() {
           onWatermarkFile={setWatermarkFile}
         />
       </div>
+
+      {results.length > 0 ? (
+        <section className="k-card-glow mt-6">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="k-label mb-1">Résultats</p>
+              <h2 className="k-subheading">{results.length} variante(s)</h2>
+            </div>
+            <span className="k-badge">{results.length} MP4</span>
+          </div>
+
+          <ul className="mt-4 max-h-64 space-y-1.5 overflow-y-auto">
+            {results.map((item) => (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  onClick={() => downloadBlob(item.blob, item.filename)}
+                  className="w-full rounded-lg border border-[rgba(0,122,255,0.12)] bg-white/90 px-3 py-2.5 text-left transition-colors hover:border-[rgba(0,122,255,0.28)] hover:bg-[rgba(0,122,255,0.04)]"
+                >
+                  <span className="text-sm font-medium text-[#007aff] hover:underline">
+                    {item.filename}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          <button
+            type="button"
+            disabled={downloadingZip}
+            onClick={() => void handleDownloadZip()}
+            className="k-btn-primary mt-4 h-11 w-full disabled:opacity-50 sm:w-auto"
+          >
+            {downloadingZip ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Package className="h-4 w-4" />
+            )}
+            Télécharger tout en ZIP
+          </button>
+        </section>
+      ) : null}
 
       {getToolGuide("/repurpose") ? (
         <ToolTutorial
