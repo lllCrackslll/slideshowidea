@@ -30,22 +30,24 @@ export function CaptionSection({
   }
 
   return (
-    <section className="grid gap-4 lg:grid-cols-[1.4fr_0.8fr]">
-      <div className="k-card">
-        <h2 className="k-label mb-3">Légende TikTok</h2>
+    <div className="space-y-4">
+      <div>
+        <h3 className="mb-2 text-xs font-medium text-[#1d1d1f]">
+          Légende TikTok
+        </h3>
         <EditableText
           key={`${carouselId}-caption`}
           initialValue={caption}
           onChange={onCaptionChange}
-          className="min-h-[140px] text-sm leading-relaxed text-[#424245]"
+          className="min-h-[100px] rounded-xl border border-[rgba(0,122,255,0.12)] bg-white/90 p-3 text-sm leading-relaxed text-[#424245]"
         />
       </div>
 
-      <div className="k-card">
-        <h2 className="k-label mb-3 flex items-center gap-1.5">
+      <div>
+        <h3 className="mb-2 flex items-center gap-1.5 text-xs font-medium text-[#1d1d1f]">
           <Hash className="h-3 w-3" />
           Hashtags
-        </h2>
+        </h3>
         <div className="flex flex-wrap gap-1.5">
           {hashtags.map((tag) => {
             const copied = copiedTag === tag;
@@ -58,7 +60,7 @@ export function CaptionSection({
                 className={`rounded-full border px-2.5 py-1 font-mono text-[11px] transition-all ${
                   copied
                     ? "border-[#007aff] bg-[#007aff] text-white"
-                    : "border-[rgba(0,122,255,0.15)] text-[#6e6e73] hover:border-[rgba(0,122,255,0.35)] hover:text-[#1d1d1f]"
+                    : "border-[rgba(0,122,255,0.15)] text-[#6e6e73] hover:border-[rgba(0,122,255,0.35)]"
                 }`}
               >
                 {copied ? (
@@ -74,6 +76,6 @@ export function CaptionSection({
           })}
         </div>
       </div>
-    </section>
+    </div>
   );
 }

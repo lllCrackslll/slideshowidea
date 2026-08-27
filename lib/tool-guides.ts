@@ -9,13 +9,11 @@ export type ToolGuide = {
 export const TOOL_GUIDES: Record<string, ToolGuide> = {
   "/content-engine": {
     status: "functional",
-    statusHint:
-      "Workflow complet : 3 concepts, comptes nommés, planning horaire, checklist, b-roll perso, banque de hooks, historique local.",
+    statusHint: "3 étapes simples : générer, éditer, télécharger le pack.",
     steps: [
-      "Clique « 3 concepts du jour » puis nomme tes comptes TikTok.",
-      "Consulte le planning horaire et exporte le pack journalier.",
-      "Coche la checklist au fur et à mesure des publications.",
-      "Banque de hooks pour le slide 1 · b-roll perso pour des visuels uniques.",
+      "Étape 1 : choisis Motivation ou Conseil → Générer 3 carrousels.",
+      "Étape 2 : modifie les textes et la légende si besoin.",
+      "Étape 3 : télécharge le pack et publie sur TikTok.",
     ],
   },
   "/image-spoofer": {

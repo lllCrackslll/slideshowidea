@@ -16,12 +16,8 @@ export function SlidesPreview({
 }: SlidesPreviewProps) {
   return (
     <section className="min-w-0">
-      <div className="mb-4 flex items-baseline justify-between gap-3">
-        <h2 className="k-subheading">Prévisualisation</h2>
-        <p className="text-xs text-[#aeaeb2]">5 slides · 9:16 · éditable</p>
-      </div>
       <div
-        className={`slides-scroll flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory transition-opacity ${
+        className={`slides-scroll flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory transition-opacity ${
           busy ? "pointer-events-none opacity-40" : "opacity-100"
         }`}
       >

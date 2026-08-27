@@ -4,31 +4,19 @@ import { useState } from "react";
 import { CaptionSection } from "@/components/caption-section";
 import { ControlPanel } from "@/components/control-panel";
 import { DistributionPanel } from "@/components/distribution-panel";
-import { Header } from "@/components/header";
 import { SlidesPreview } from "@/components/slides-preview";
-import { ToolTutorial } from "@/components/shell/tool-tutorial";
-import { copyText } from "@/lib/clipboard";
 import {
   DEFAULT_CAROUSEL,
-  formatCarouselText,
 } from "@/lib/content-engine";
 import { mapGeneratedToCarousel } from "@/lib/map-generated-carousel";
-import { getToolGuide } from "@/lib/tool-guides";
 import type { GenerateResponse } from "@/lib/api-types";
-import type { Carousel, FormatId, GenreId, Slide } from "@/lib/types";
-import {
-  downloadSlidesZip,
-  slidesToExportFormat,
-} from "@/utils/generateSlides";
+import type { Carousel, GenreId, Slide } from "@/lib/types";
 
-async function fetchCarousel(
-  genre: GenreId,
-  format: FormatId,
-): Promise<Carousel> {
+async function fetchCarousel(genre: GenreId): Promise<Carousel> {
   const response = await fetch("/api/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ genre, format }),
+    body: JSON.stringify({ genre, format: "short" }),
   });
 
   const payload = (await response.json()) as
@@ -47,63 +35,31 @@ async function fetchCarousel(
 }
 
 export function ContentEngineApp() {
-  const [format, setFormat] = useState<FormatId>("short");
   const [genre, setGenre] = useState<GenreId>(DEFAULT_CAROUSEL.genre);
   const [carousel, setCarousel] = useState<Carousel>(DEFAULT_CAROUSEL);
   const [carouselQueue, setCarouselQueue] = useState<Carousel[]>([]);
   const [activeConcept, setActiveConcept] = useState(0);
   const [busy, setBusy] = useState(false);
   const [batchLabel, setBatchLabel] = useState<string | null>(null);
-  const [exporting, setExporting] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const activeCarousel =
     carouselQueue.length > 0 ? carouselQueue[activeConcept] : carousel;
 
-  function applyCarousel(next: Carousel, queue?: Carousel[]) {
-    if (queue && queue.length > 0) {
-      setCarouselQueue(queue);
-      setActiveConcept(0);
-      setCarousel(queue[0]);
-    } else {
-      setCarouselQueue([]);
-      setActiveConcept(0);
-      setCarousel(next);
-    }
-  }
-
-  async function handleGenerate() {
-    setBusy(true);
-    setError(null);
-    setBatchLabel(null);
-
-    try {
-      const next = await fetchCarousel(genre, format);
-      applyCarousel(next);
-    } catch (generateError) {
-      setError(
-        generateError instanceof Error
-          ? generateError.message
-          : "Erreur inattendue.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleGenerateBatch(count: number) {
+  async function handleGenerateBatch() {
     setBusy(true);
     setError(null);
 
     try {
       const results: Carousel[] = [];
-      for (let i = 0; i < count; i += 1) {
-        setBatchLabel(`Concept ${i + 1}/${count}…`);
-        results.push(await fetchCarousel(genre, format));
+      for (let i = 0; i < 3; i += 1) {
+        setBatchLabel(`Carrousel ${i + 1}/3…`);
+        results.push(await fetchCarousel(genre));
       }
-      applyCarousel(results[0], results);
-      setBatchLabel(`${count} concepts prêts.`);
+      setCarouselQueue(results);
+      setActiveConcept(0);
+      setCarousel(results[0]);
+      setBatchLabel("3 carrousels prêts — passe à l'étape 2.");
     } catch (generateError) {
       setError(
         generateError instanceof Error
@@ -112,7 +68,7 @@ export function ContentEngineApp() {
       );
     } finally {
       setBusy(false);
-      window.setTimeout(() => setBatchLabel(null), 3000);
+      window.setTimeout(() => setBatchLabel(null), 4000);
     }
   }
 
@@ -130,35 +86,6 @@ export function ContentEngineApp() {
       setCarouselQueue((current) =>
         current.map((item, index) => (index === activeConcept ? next : item)),
       );
-    }
-  }
-
-  async function handleCopyAll() {
-    try {
-      await copyText(formatCarouselText(activeCarousel));
-    } finally {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1600);
-    }
-  }
-
-  async function handleDownloadZip() {
-    setExporting(true);
-    setError(null);
-
-    try {
-      await downloadSlidesZip(
-        slidesToExportFormat(activeCarousel.slides),
-        activeCarousel.topic,
-      );
-    } catch (exportError) {
-      setError(
-        exportError instanceof Error
-          ? exportError.message
-          : "Export ZIP impossible.",
-      );
-    } finally {
-      setExporting(false);
     }
   }
 
@@ -181,72 +108,76 @@ export function ContentEngineApp() {
   }
 
   return (
-    <div className="flex min-h-full flex-col">
-      <Header
-        onDownloadZip={handleDownloadZip}
-        exporting={exporting}
-        canDownload={activeCarousel.slides.length === 5 && !busy}
-      />
-      <ControlPanel
-        format={format}
-        genre={genre}
-        busy={busy}
-        copied={copied}
-        error={error}
-        batchLabel={batchLabel}
-        onFormatChange={setFormat}
-        onGenreChange={setGenre}
-        onGenerate={handleGenerate}
-        onGenerateBatch={() => handleGenerateBatch(3)}
-        onCopyAll={handleCopyAll}
-      />
+    <div className="mx-auto w-full max-w-[800px] px-4 py-5 sm:px-5 sm:py-8">
+      <div className="mb-6 text-center sm:mb-8">
+        <h1 className="text-lg font-semibold text-[#1d1d1f] sm:text-xl">
+          Crée tes carrousels TikTok
+        </h1>
+        <p className="mt-1 text-sm text-[#86868b]">
+          3 étapes : générer → éditer → télécharger
+        </p>
+      </div>
 
-      {carouselQueue.length > 1 ? (
-        <div className="k-divider bg-white/50 backdrop-blur-sm">
-          <div className="mx-auto flex max-w-[1400px] flex-wrap gap-2 px-4 py-3 sm:px-5">
-            {carouselQueue.map((item, index) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => selectConcept(index)}
-                className={`k-chip ${index === activeConcept ? "k-chip-active" : ""}`}
-              >
-                Concept {index + 1} · {item.topic.slice(0, 28)}
-                {item.topic.length > 28 ? "…" : ""}
-              </button>
-            ))}
+      <div className="flex flex-col gap-5 sm:gap-6">
+        <ControlPanel
+          genre={genre}
+          busy={busy}
+          batchLabel={batchLabel}
+          error={error}
+          onGenreChange={setGenre}
+          onGenerateBatch={handleGenerateBatch}
+        />
+
+        <section className="k-card">
+          <p className="k-label mb-1">Étape 2</p>
+          <h2 className="k-subheading">Vérifier & éditer</h2>
+          <p className="mt-1 text-xs text-[#86868b]">
+            Clique sur un texte pour le modifier. Change de carrousel avec les
+            onglets.
+          </p>
+
+          {carouselQueue.length > 1 ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {carouselQueue.map((item, index) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => selectConcept(index)}
+                  className={`k-chip ${index === activeConcept ? "k-chip-active" : ""}`}
+                >
+                  Carrousel {index + 1}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          <div className="mt-4">
+            <SlidesPreview
+              slides={activeCarousel.slides}
+              busy={busy}
+              onSlideChange={handleSlideChange}
+            />
           </div>
-        </div>
-      ) : null}
 
-      <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col gap-6 px-4 py-5 sm:gap-8 sm:px-5 sm:py-6">
+          <div className="mt-4">
+            <CaptionSection
+              carouselId={activeCarousel.id}
+              caption={activeCarousel.caption}
+              hashtags={activeCarousel.hashtags}
+              onCaptionChange={(caption) =>
+                updateActiveCarousel((current) => ({ ...current, caption }))
+              }
+            />
+          </div>
+        </section>
+
         <DistributionPanel
           carousel={activeCarousel}
           carouselQueue={carouselQueue}
           disabled={busy}
           onApplyHook={handleApplyHook}
         />
-
-        <SlidesPreview
-          slides={activeCarousel.slides}
-          busy={busy}
-          onSlideChange={handleSlideChange}
-        />
-        <CaptionSection
-          carouselId={activeCarousel.id}
-          caption={activeCarousel.caption}
-          hashtags={activeCarousel.hashtags}
-          onCaptionChange={(caption) =>
-            updateActiveCarousel((current) => ({ ...current, caption }))
-          }
-        />
-        {getToolGuide("/content-engine") ? (
-          <ToolTutorial
-            guide={getToolGuide("/content-engine")!}
-            className="mb-4"
-          />
-        ) : null}
-      </main>
+      </div>
     </div>
   );
 }
