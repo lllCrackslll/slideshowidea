@@ -21,12 +21,12 @@ export const TOOL_GUIDES: Record<string, ToolGuide> = {
   "/repurpose": {
     status: "partial",
     statusHint:
-      "Filtres TikFusion via FFmpeg WASM. Vidéos courtes (< ~60 s, < ~50 Mo) recommandées.",
+      "FFmpeg multi-thread dans le navigateur. Vidéos courtes (< ~60 s) pour un traitement rapide.",
     steps: [
       "Choisis un preset (Instagram, TikTok) ou ajuste les filtres à droite.",
       "Dépose une ou plusieurs vidéos MP4/MOV/MKV.",
       "Règle le nombre de copies par fichier et ajoute un watermark si besoin.",
-      "Clique Générer les variantes — chaque MP4 unique se télécharge.",
+      "Clique Générer les variantes — un ZIP avec tous les MP4 se télécharge.",
     ],
   },
   "/planning": {

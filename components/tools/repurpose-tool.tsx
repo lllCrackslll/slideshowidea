@@ -7,7 +7,10 @@ import { FileDropzone } from "@/components/shell/file-dropzone";
 import { ToolPage } from "@/components/shell/tool-page";
 import { ToolTutorial } from "@/components/shell/tool-tutorial";
 import { useFfmpeg } from "@/hooks/use-ffmpeg";
-import { downloadBlob } from "@/lib/image-processing";
+import {
+  downloadRepurposeZip,
+  type RepurposeZipEntry,
+} from "@/lib/repurpose/download-zip";
 import { getToolGuide } from "@/lib/tool-guides";
 import {
   DEFAULT_REPURPOSE_SETTINGS,
@@ -50,6 +53,7 @@ export function RepurposeTool() {
       await load();
       let done = 0;
       const total = files.length * copies;
+      const zipEntries: RepurposeZipEntry[] = [];
 
       for (const file of files) {
         const base = file.name.replace(/\.[^.]+$/, "");
@@ -61,13 +65,20 @@ export function RepurposeTool() {
             `out-${Date.now()}-${i}.mp4`,
           );
           const suffix = String.fromCharCode(97 + (i % 26));
-          downloadBlob(blob, `${base}-repurpose-${suffix}.mp4`);
+          zipEntries.push({
+            filename: `${base}-repurpose-${suffix}.mp4`,
+            blob,
+          });
           done += 1;
           setMessage(`Variante ${done}/${total}…`);
         }
       }
 
-      setMessage(`${total} variante(s) téléchargée(s).`);
+      await downloadRepurposeZip(
+        zipEntries,
+        files.length === 1 ? files[0].name.replace(/\.[^.]+$/, "") : "repurpose",
+      );
+      setMessage(`Pack ZIP prêt — ${total} variante(s).`);
     } catch (error) {
       setMessage(
         error instanceof Error

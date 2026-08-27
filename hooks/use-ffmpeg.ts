@@ -18,16 +18,20 @@ export function useFfmpeg() {
     if (loaded && ffmpegRef.current) return ffmpegRef.current;
 
     setLoading(true);
-    setLog("Chargement de FFmpeg (~30 Mo)…");
+    setLog("Chargement de FFmpeg (~31 Mo, multi-thread)…");
 
     const ffmpeg = new FFmpeg();
     ffmpeg.on("progress", ({ progress: p }) => setProgress(Math.round(p * 100)));
     ffmpeg.on("log", ({ message }) => setLog(message));
 
-    const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
+    const baseURL = "https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/esm";
     await ffmpeg.load({
       coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
       wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+      workerURL: await toBlobURL(
+        `${baseURL}/ffmpeg-core.worker.js`,
+        "text/javascript",
+      ),
     });
 
     ffmpegRef.current = ffmpeg;
@@ -96,9 +100,9 @@ export function useFfmpeg() {
         "-c:v",
         "libx264",
         "-preset",
-        "fast",
+        "ultrafast",
         "-crf",
-        "22",
+        "23",
         "-c:a",
         "aac",
         "-movflags",
