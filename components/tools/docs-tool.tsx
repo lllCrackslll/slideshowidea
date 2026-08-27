@@ -23,7 +23,7 @@ const SECTIONS = [
 
 export function DocsTool() {
   return (
-    <ToolPage title="Documentation" subtitle="Guide Kognia Studio.">
+    <ToolPage title="Documentation" subtitle="Guide carrousels.studio.">
       <div className="space-y-3">
         {SECTIONS.map((section) => (
           <article key={section.title} className="k-card">
