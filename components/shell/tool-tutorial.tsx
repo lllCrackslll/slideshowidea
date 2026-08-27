@@ -24,12 +24,14 @@ const STATUS_STYLES: Record<
 type ToolTutorialProps = {
   guide: ToolGuide;
   compact?: boolean;
+  showStatus?: boolean;
   className?: string;
 };
 
 export function ToolTutorial({
   guide,
   compact = false,
+  showStatus = true,
   className = "",
 }: ToolTutorialProps) {
   const status = STATUS_STYLES[guide.status];
@@ -37,12 +39,14 @@ export function ToolTutorial({
   return (
     <div className={`k-card ${className}`}>
       <div className="flex flex-wrap items-center gap-2">
-        <span
-          className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium ${status.badge}`}
-        >
-          <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
-          {status.label}
-        </span>
+        {showStatus ? (
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium ${status.badge}`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
+            {status.label}
+          </span>
+        ) : null}
         {!compact ? (
           <span className="k-label">Mode d&apos;emploi</span>
         ) : null}

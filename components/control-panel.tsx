@@ -7,27 +7,27 @@ import type { GenreId } from "@/lib/types";
 type ControlPanelProps = {
   genre: GenreId;
   busy: boolean;
-  batchLabel?: string | null;
+  statusLabel?: string | null;
   error: string | null;
   onGenreChange: (genre: GenreId) => void;
-  onGenerateBatch: () => void;
+  onGenerate: () => void;
 };
 
 export function ControlPanel({
   genre,
   busy,
-  batchLabel,
+  statusLabel,
   error,
   onGenreChange,
-  onGenerateBatch,
+  onGenerate,
 }: ControlPanelProps) {
   return (
     <section className="k-card">
       <p className="k-label mb-1">Étape 1</p>
-      <h2 className="k-subheading">Générer tes carrousels</h2>
+      <h2 className="k-subheading">Générer le carrousel</h2>
       <p className="mt-1 text-xs text-[#86868b]">
-        Choisis un thème, puis lance la génération de 3 carrousels prêts à
-        publier.
+        Un seul carrousel — tu le publieras ensuite sur tous tes comptes avec
+        des visuels légèrement différents.
       </p>
 
       <div className="mt-4 flex flex-wrap gap-2">
@@ -49,16 +49,16 @@ export function ControlPanel({
 
       <button
         type="button"
-        onClick={onGenerateBatch}
+        onClick={onGenerate}
         disabled={busy}
         className="k-btn-primary mt-4 h-11 w-full sm:w-auto"
       >
         <Sparkles className={`h-4 w-4 ${busy ? "animate-pulse" : ""}`} />
-        {busy ? "Génération en cours…" : "Générer 3 carrousels"}
+        {busy ? "Génération…" : "Générer le carrousel"}
       </button>
 
-      {batchLabel ? (
-        <p className="mt-2 text-xs font-medium text-[#007aff]">{batchLabel}</p>
+      {statusLabel ? (
+        <p className="mt-2 text-xs font-medium text-[#007aff]">{statusLabel}</p>
       ) : null}
 
       {error ? (

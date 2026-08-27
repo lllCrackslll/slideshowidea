@@ -4,30 +4,29 @@ import { Check, Copy, ExternalLink, Loader2, Package } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { DistributionSection } from "@/components/distribution/distribution-section";
-import { BrollUploadPanel } from "@/components/distribution/broll-upload-panel";
 import { HooksBankPanel } from "@/components/distribution/hooks-bank-panel";
 import { getAccountNames } from "@/components/distribution/account-names-panel";
+import type { SlideImages } from "@/components/slide-images-panel";
+import { slideImagesReady } from "@/components/slide-images-panel";
 import { copyText } from "@/lib/clipboard";
 import { loadPlanningSettings } from "@/lib/distribution/planning-settings";
 import { savePackHistoryEntry } from "@/lib/distribution/pack-history";
 import type { Carousel } from "@/lib/types";
 import {
-  downloadDailyPack,
   downloadDistributionPack,
   slidesToExportFormat,
-  splitAccountsAcrossConcepts,
 } from "@/utils/generateSlides";
 
 type DistributionPanelProps = {
   carousel: Carousel;
-  carouselQueue?: Carousel[];
+  slideImages: SlideImages;
   disabled?: boolean;
   onApplyHook?: (hook: string) => void;
 };
 
 export function DistributionPanel({
   carousel,
-  carouselQueue = [],
+  slideImages,
   disabled = false,
   onApplyHook,
 }: DistributionPanelProps) {
@@ -36,8 +35,8 @@ export function DistributionPanel({
   const [progress, setProgress] = useState<string | null>(null);
   const [copiedCaption, setCopiedCaption] = useState(false);
 
-  const hasQueue = carouselQueue.length > 1;
   const accountCount = planning.accountCount;
+  const imagesReady = slideImagesReady(slideImages);
 
   useEffect(() => {
     setPlanning(loadPlanningSettings());
@@ -55,60 +54,35 @@ export function DistributionPanel({
   }
 
   async function handleExport() {
+    if (!imagesReady) {
+      setProgress("Importe les 5 images avant d'exporter.");
+      return;
+    }
+
     setExporting(true);
     setProgress("Préparation du pack…");
 
     try {
-      if (hasQueue) {
-        const splits = splitAccountsAcrossConcepts(
-          carouselQueue.length,
-          accountCount,
-        );
-        let offset = 0;
-        await downloadDailyPack(
-          carouselQueue.map((item, index) => {
-            const entry = {
-              topicTitle: item.topic,
-              caption: item.caption,
-              hashtags: item.hashtags,
-              slides: slidesToExportFormat(item.slides),
-              accountCount: splits[index],
-              accountNames,
-              accountOffset: offset,
-            };
-            offset += splits[index];
-            return entry;
-          }),
-          (done, total) => setProgress(`Création des visuels ${done}/${total}…`),
-        );
-        savePackHistoryEntry({
-          label: `Pack du jour · ${carouselQueue.length} carrousels`,
-          accountCount,
-          conceptCount: carouselQueue.length,
-          packType: "daily",
-        });
-        setProgress(
-          `Pack prêt — ${accountCount} comptes, ${carouselQueue.length} carrousels.`,
-        );
-      } else {
-        await downloadDistributionPack({
-          slides: slidesToExportFormat(carousel.slides),
-          topicTitle: carousel.topic,
-          caption: carousel.caption,
-          hashtags: carousel.hashtags,
-          accountCount,
-          accountNames,
-          onProgress: (done, total) =>
-            setProgress(`Création des visuels ${done}/${total}…`),
-        });
-        savePackHistoryEntry({
-          label: carousel.topic,
-          accountCount,
-          conceptCount: 1,
-          packType: "single",
-        });
-        setProgress(`Pack prêt — ${accountCount} comptes.`);
-      }
+      await downloadDistributionPack({
+        slides: slidesToExportFormat(carousel.slides),
+        topicTitle: carousel.topic,
+        caption: carousel.caption,
+        hashtags: carousel.hashtags,
+        accountCount,
+        accountNames,
+        slideBackgrounds: slideImages,
+        onProgress: (done, total) =>
+          setProgress(`Création des visuels ${done}/${total}…`),
+      });
+      savePackHistoryEntry({
+        label: carousel.topic,
+        accountCount,
+        conceptCount: 1,
+        packType: "single",
+      });
+      setProgress(
+        `Pack prêt — ${accountCount} comptes, même carrousel, visuels uniques.`,
+      );
     } catch (error) {
       setProgress(
         error instanceof Error ? error.message : "Export impossible.",
@@ -120,14 +94,15 @@ export function DistributionPanel({
 
   return (
     <section className="k-card-glow">
-      <p className="k-label mb-1">Étape 3</p>
-      <h2 className="k-subheading">Télécharger</h2>
+      <p className="k-label mb-1">Étape 4</p>
+      <h2 className="k-subheading">Télécharger le pack</h2>
       <p className="mt-1 text-xs text-[#86868b]">
-        Export pour{" "}
+        Même texte sur{" "}
         <strong className="font-medium text-[#1d1d1f]">
           {accountCount} comptes
         </strong>{" "}
-        (réglé dans Planning). 1 dossier = 5 images + légende.
+        — chaque dossier a des variations légères sur tes 5 fonds (réglé dans
+        Planning).
       </p>
 
       <Link
@@ -138,10 +113,18 @@ export function DistributionPanel({
         <ExternalLink className="h-3 w-3" />
       </Link>
 
+      {!imagesReady ? (
+        <p className="mt-3 rounded-lg bg-[rgba(0,122,255,0.06)] px-3 py-2 text-xs text-[#007aff]">
+          Importe les 5 images à l&apos;étape 3 pour débloquer l&apos;export.
+        </p>
+      ) : null}
+
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">
         <button
           type="button"
-          disabled={disabled || exporting || carousel.slides.length !== 5}
+          disabled={
+            disabled || exporting || carousel.slides.length !== 5 || !imagesReady
+          }
           onClick={handleExport}
           className="k-btn-primary h-11 w-full sm:flex-1 disabled:opacity-50"
         >
@@ -150,7 +133,7 @@ export function DistributionPanel({
           ) : (
             <Package className="h-4 w-4" />
           )}
-          Télécharger le pack
+          Télécharger pour {accountCount} comptes
         </button>
         <button
           type="button"
@@ -171,15 +154,13 @@ export function DistributionPanel({
       ) : null}
 
       <div className="mt-5 rounded-xl border border-[rgba(0,122,255,0.1)] bg-white/80 p-3">
-        <p className="text-xs font-medium text-[#1d1d1f]">
-          Comment publier
-        </p>
+        <p className="text-xs font-medium text-[#1d1d1f]">Comment publier</p>
         <ol className="mt-2 space-y-1.5 text-[11px] text-[#86868b]">
-          <li>1. Dézippe — 1 dossier par compte.</li>
+          <li>1. Dézippe — 1 dossier par compte TikTok.</li>
           <li>2. TikTok → Créer → Photo → slide-1 à slide-5.</li>
-          <li>3. Colle la légende, publie.</li>
+          <li>3. Colle la légende, publie sur ce compte.</li>
           <li>
-            4. Coche dans{" "}
+            4. Répète pour chaque dossier, coche dans{" "}
             <Link href="/planning" className="text-[#007aff] hover:underline">
               Planning
             </Link>
@@ -188,24 +169,16 @@ export function DistributionPanel({
         </ol>
       </div>
 
-      <DistributionSection title="Options" subtitle="Facultatif">
-        <div className="space-y-4">
-          {onApplyHook ? (
-            <div>
-              <p className="mb-2 text-xs font-medium text-[#1d1d1f]">
-                Accroche slide 1
-              </p>
-              <HooksBankPanel onApplyHook={onApplyHook} />
-            </div>
-          ) : null}
+      {onApplyHook ? (
+        <DistributionSection title="Options" subtitle="Facultatif">
           <div>
             <p className="mb-2 text-xs font-medium text-[#1d1d1f]">
-              Fonds d&apos;image perso
+              Accroche slide 1
             </p>
-            <BrollUploadPanel />
+            <HooksBankPanel onApplyHook={onApplyHook} />
           </div>
-        </div>
-      </DistributionSection>
+        </DistributionSection>
+      ) : null}
     </section>
   );
 }

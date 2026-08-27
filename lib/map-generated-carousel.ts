@@ -16,13 +16,21 @@ export function mapGeneratedToCarousel(
   const slides: Slide[] = data.slides
     .slice()
     .sort((a, b) => a.slide_number - b.slide_number)
-    .map((slide) => ({
-      id: uid("s"),
-      slideNumber: slide.slide_number,
-      title: slide.title,
-      text: slide.text,
-      visual: slide.background_idea,
-    }));
+    .map((slide) => {
+      const title = slide.title?.trim() ?? "";
+      const text = slide.text?.trim() ?? "";
+      // Format Short : l'IA met parfois tout dans title et laisse text vide.
+      const visibleText =
+        text && title && title !== text ? `${title}\n${text}` : text || title;
+
+      return {
+        id: uid("s"),
+        slideNumber: slide.slide_number,
+        title: text && title && title !== text ? title : undefined,
+        text: visibleText,
+        visual: slide.background_idea,
+      };
+    });
 
   return {
     id: uid("c"),

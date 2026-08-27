@@ -1,13 +1,19 @@
 "use client";
 
+import { Check, Copy } from "lucide-react";
 import { useState } from "react";
 import { CaptionSection } from "@/components/caption-section";
 import { ControlPanel } from "@/components/control-panel";
 import { DistributionPanel } from "@/components/distribution-panel";
 import { SlidesPreview } from "@/components/slides-preview";
 import {
-  DEFAULT_CAROUSEL,
-} from "@/lib/content-engine";
+  SlideImagesPanel,
+  emptySlideImages,
+  type SlideImages,
+} from "@/components/slide-images-panel";
+import { DEFAULT_CAROUSEL } from "@/lib/content-engine";
+import { copyText } from "@/lib/clipboard";
+import { buildAllImagePrompts } from "@/lib/image-prompts";
 import { mapGeneratedToCarousel } from "@/lib/map-generated-carousel";
 import type { GenerateResponse } from "@/lib/api-types";
 import type { Carousel, GenreId, Slide } from "@/lib/types";
@@ -37,29 +43,21 @@ async function fetchCarousel(genre: GenreId): Promise<Carousel> {
 export function ContentEngineApp() {
   const [genre, setGenre] = useState<GenreId>(DEFAULT_CAROUSEL.genre);
   const [carousel, setCarousel] = useState<Carousel>(DEFAULT_CAROUSEL);
-  const [carouselQueue, setCarouselQueue] = useState<Carousel[]>([]);
-  const [activeConcept, setActiveConcept] = useState(0);
+  const [slideImages, setSlideImages] = useState<SlideImages>(emptySlideImages);
   const [busy, setBusy] = useState(false);
-  const [batchLabel, setBatchLabel] = useState<string | null>(null);
+  const [statusLabel, setStatusLabel] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [copiedAllPrompts, setCopiedAllPrompts] = useState(false);
 
-  const activeCarousel =
-    carouselQueue.length > 0 ? carouselQueue[activeConcept] : carousel;
-
-  async function handleGenerateBatch() {
+  async function handleGenerate() {
     setBusy(true);
     setError(null);
 
     try {
-      const results: Carousel[] = [];
-      for (let i = 0; i < 3; i += 1) {
-        setBatchLabel(`Carrousel ${i + 1}/3…`);
-        results.push(await fetchCarousel(genre));
-      }
-      setCarouselQueue(results);
-      setActiveConcept(0);
-      setCarousel(results[0]);
-      setBatchLabel("3 carrousels prêts — passe à l'étape 2.");
+      const result = await fetchCarousel(genre);
+      setCarousel(result);
+      setSlideImages(emptySlideImages());
+      setStatusLabel("Carrousel prêt — copie les prompts puis importe tes images.");
     } catch (generateError) {
       setError(
         generateError instanceof Error
@@ -68,29 +66,16 @@ export function ContentEngineApp() {
       );
     } finally {
       setBusy(false);
-      window.setTimeout(() => setBatchLabel(null), 4000);
+      window.setTimeout(() => setStatusLabel(null), 5000);
     }
   }
 
-  function selectConcept(index: number) {
-    setActiveConcept(index);
-    if (carouselQueue[index]) {
-      setCarousel(carouselQueue[index]);
-    }
-  }
-
-  function updateActiveCarousel(updater: (current: Carousel) => Carousel) {
-    const next = updater(activeCarousel);
-    setCarousel(next);
-    if (carouselQueue.length > 0) {
-      setCarouselQueue((current) =>
-        current.map((item, index) => (index === activeConcept ? next : item)),
-      );
-    }
+  function updateCarousel(updater: (current: Carousel) => Carousel) {
+    setCarousel((current) => updater(current));
   }
 
   function handleSlideChange(id: string, patch: Partial<Slide>) {
-    updateActiveCarousel((current) => ({
+    updateCarousel((current) => ({
       ...current,
       slides: current.slides.map((slide) =>
         slide.id === id ? { ...slide, ...patch } : slide,
@@ -100,21 +85,29 @@ export function ContentEngineApp() {
 
   function handleApplyHook(hook: string) {
     const slide1 =
-      activeCarousel.slides.find((s) => s.slideNumber === 1) ??
-      activeCarousel.slides[0];
+      carousel.slides.find((s) => s.slideNumber === 1) ?? carousel.slides[0];
     if (slide1) {
       handleSlideChange(slide1.id, { text: hook });
     }
+  }
+
+  async function copyAllPrompts() {
+    const prompts = buildAllImagePrompts(
+      carousel.slides.map((slide) => slide.visual),
+    );
+    await copyText(prompts);
+    setCopiedAllPrompts(true);
+    window.setTimeout(() => setCopiedAllPrompts(false), 1600);
   }
 
   return (
     <div className="mx-auto w-full max-w-[800px] px-4 py-5 sm:px-5 sm:py-8">
       <div className="mb-6 text-center sm:mb-8">
         <h1 className="text-lg font-semibold text-[#1d1d1f] sm:text-xl">
-          Crée tes carrousels TikTok
+          Crée ton carrousel TikTok
         </h1>
         <p className="mt-1 text-sm text-[#86868b]">
-          3 étapes : générer → éditer → télécharger
+          4 étapes : générer → prompts → images → pack multi-comptes
         </p>
       </div>
 
@@ -122,38 +115,39 @@ export function ContentEngineApp() {
         <ControlPanel
           genre={genre}
           busy={busy}
-          batchLabel={batchLabel}
+          statusLabel={statusLabel}
           error={error}
           onGenreChange={setGenre}
-          onGenerateBatch={handleGenerateBatch}
+          onGenerate={handleGenerate}
         />
 
         <section className="k-card">
-          <p className="k-label mb-1">Étape 2</p>
-          <h2 className="k-subheading">Vérifier & éditer</h2>
-          <p className="mt-1 text-xs text-[#86868b]">
-            Clique sur un texte pour le modifier. Change de carrousel avec les
-            onglets.
-          </p>
-
-          {carouselQueue.length > 1 ? (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {carouselQueue.map((item, index) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => selectConcept(index)}
-                  className={`k-chip ${index === activeConcept ? "k-chip-active" : ""}`}
-                >
-                  Carrousel {index + 1}
-                </button>
-              ))}
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="k-label mb-1">Étape 2</p>
+              <h2 className="k-subheading">Textes & prompts image</h2>
+              <p className="mt-1 text-xs text-[#86868b]">
+                Édite les textes, copie chaque prompt dans ton IA (Midjourney,
+                ChatGPT…), génère 5 images verticales 9:16.
+              </p>
             </div>
-          ) : null}
+            <button
+              type="button"
+              onClick={() => void copyAllPrompts()}
+              className="k-btn-secondary h-9 shrink-0 text-xs"
+            >
+              {copiedAllPrompts ? (
+                <Check className="h-3.5 w-3.5 text-[#007aff]" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
+              Copier les 5 prompts
+            </button>
+          </div>
 
           <div className="mt-4">
             <SlidesPreview
-              slides={activeCarousel.slides}
+              slides={carousel.slides}
               busy={busy}
               onSlideChange={handleSlideChange}
             />
@@ -161,19 +155,35 @@ export function ContentEngineApp() {
 
           <div className="mt-4">
             <CaptionSection
-              carouselId={activeCarousel.id}
-              caption={activeCarousel.caption}
-              hashtags={activeCarousel.hashtags}
+              carouselId={carousel.id}
+              caption={carousel.caption}
+              hashtags={carousel.hashtags}
               onCaptionChange={(caption) =>
-                updateActiveCarousel((current) => ({ ...current, caption }))
+                updateCarousel((current) => ({ ...current, caption }))
               }
             />
           </div>
         </section>
 
+        <section className="k-card">
+          <p className="k-label mb-1">Étape 3</p>
+          <h2 className="k-subheading">Importer tes 5 images</h2>
+          <p className="mt-1 text-xs text-[#86868b]">
+            Une image par slide, dans l&apos;ordre. Elles serviront de fond pour
+            tous tes comptes (avec de légères variations automatiques).
+          </p>
+          <div className="mt-4">
+            <SlideImagesPanel
+              images={slideImages}
+              onChange={setSlideImages}
+              disabled={busy}
+            />
+          </div>
+        </section>
+
         <DistributionPanel
-          carousel={activeCarousel}
-          carouselQueue={carouselQueue}
+          carousel={carousel}
+          slideImages={slideImages}
           disabled={busy}
           onApplyHook={handleApplyHook}
         />

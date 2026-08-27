@@ -25,6 +25,8 @@ export type DistributionPackInput = {
   accountNames?: string[];
   accountNameOffset?: number;
   conceptLabel?: string;
+  /** 5 data URLs — slide 1 à 5. Prioritaire sur le b-roll par défaut. */
+  slideBackgrounds?: (string | null)[];
   onProgress?: (done: number, total: number) => void;
 };
 
@@ -89,10 +91,14 @@ async function drawBackground(
   ctx: CanvasRenderingContext2D,
   slideNumber: number,
   variant: VariantProfile,
+  slideBackgrounds?: (string | null)[],
 ): Promise<void> {
   const rand = seededRandom(variant.seed + slideNumber * 131);
+  const customSrc = slideBackgrounds?.[slideNumber - 1] ?? null;
   const pools = getMergedBrollPools();
-  const src = brollPathForSlide(slideNumber, pools, rand);
+  const src =
+    customSrc?.trim() ||
+    brollPathForSlide(slideNumber, pools, rand);
   const zoom = 1 + 0.01 + variant.zoomExtra + rand() * 0.04;
 
   try {
@@ -189,6 +195,7 @@ function slideDisplayText(slide: ExportSlide): string {
 async function renderSlideToCanvas(
   slide: ExportSlide,
   variant?: VariantProfile,
+  slideBackgrounds?: (string | null)[],
 ): Promise<HTMLCanvasElement> {
   const profile =
     variant ??
@@ -200,7 +207,7 @@ async function renderSlideToCanvas(
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas 2D indisponible.");
 
-  await drawBackground(ctx, slide.slideNumber, profile);
+  await drawBackground(ctx, slide.slideNumber, profile, slideBackgrounds);
 
   ctx.font = `600 34px Arial, Helvetica, sans-serif`;
   ctx.textAlign = "center";
@@ -265,7 +272,7 @@ function readmeDistribution(accountCount: number, conceptLabel: string): string 
     `Pack distribution Kognia — ${conceptLabel}`,
     "",
     `${accountCount} dossiers (compte-01 … compte-${String(accountCount).padStart(2, "0")})`,
-    "Chaque dossier = 1 compte TikTok avec visuels uniques (même texte, fond/couleurs différents).",
+    "Chaque dossier = 1 compte TikTok avec visuels uniques (même texte, légères variations sur tes 5 fonds).",
     "",
     "Workflow rapide :",
     "• 1 dossier = 1 compte = 1 carrousel",
@@ -302,7 +309,11 @@ async function addConceptToZip(
     zip.file(`${folder}/caption.txt`, captionFile(input.caption, input.hashtags));
 
     for (const slide of ordered) {
-      const canvas = await renderSlideToCanvas(slide, profile);
+      const canvas = await renderSlideToCanvas(
+        slide,
+        profile,
+        input.slideBackgrounds,
+      );
       const blob = await canvasToBlob(canvas, "image/jpeg", profile.jpegQuality);
       zip.file(`${folder}/slide-${slide.slideNumber}.jpg`, blob);
       done += 1;

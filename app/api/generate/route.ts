@@ -27,7 +27,7 @@ Structure obligatoire des 5 slides :
 Contraintes :
 - 1 à 2 phrases max par slide.
 - Chaque slide : title (accroche) + text (corps).
-- background_idea : description visuelle concrète.
+- background_idea : description visuelle concrète, optimisée pour génération IA (ambiance sombre, sujet clair, sans texte dans l'image).
 - caption : légende TikTok à la première personne, prête à publier.
 - hashtags : 8 à 12, sans le #.`;
 
@@ -48,10 +48,9 @@ Structure obligatoire des 5 slides (même arc narratif, version ultra condensée
 - Slide 5 (CTA) : 3 à 8 mots max. Motivation + lien en bio (@kognia.app).
 
 Contraintes :
-- title : 2 à 5 mots max (gros texte à l'écran).
-- text : 0 à 6 mots max. Peut être vide si title suffit. Jamais plus d'une micro-phrase.
-- Total title + text : ne dépasse jamais 12 mots par slide.
-- background_idea : description visuelle concrète et minimaliste.
+- text : contient TOUJOURS le texte visible à l'écran (obligatoire, jamais vide).
+- title : optionnel, uniquement si tu veux séparer accroche et corps (sinon laisse vide).
+- background_idea : description visuelle concrète et minimaliste, optimisée pour génération IA (pas de texte dans l'image, ambiance sombre, sujet clair).
 - caption : légende courte (3 à 5 lignes max), directe, prête à publier.
 - hashtags : 8 à 12, sans le #.`;
 

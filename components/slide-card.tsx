@@ -1,7 +1,10 @@
 "use client";
 
-import { ImageIcon } from "lucide-react";
+import { Check, Copy, ImageIcon } from "lucide-react";
+import { useState } from "react";
 import { EditableText } from "@/components/editable-text";
+import { copyText } from "@/lib/clipboard";
+import { buildImagePrompt } from "@/lib/image-prompts";
 import type { Slide } from "@/lib/types";
 
 type SlideCardProps = {
@@ -12,6 +15,14 @@ type SlideCardProps = {
 };
 
 export function SlideCard({ slide, index, total, onChange }: SlideCardProps) {
+  const [copiedPrompt, setCopiedPrompt] = useState(false);
+
+  async function copyPrompt() {
+    await copyText(buildImagePrompt(slide.visual));
+    setCopiedPrompt(true);
+    window.setTimeout(() => setCopiedPrompt(false), 1600);
+  }
+
   return (
     <article
       className="relative w-[210px] shrink-0 snap-start overflow-hidden rounded-[1.35rem] border border-[rgba(0,122,255,0.2)] sm:w-[230px]"
@@ -29,7 +40,7 @@ export function SlideCard({ slide, index, total, onChange }: SlideCardProps) {
           </p>
         </div>
 
-        <div className="absolute inset-x-4 top-[18%] bottom-[30%] z-10 flex items-center">
+        <div className="absolute inset-x-4 top-[18%] bottom-[36%] z-10 flex items-center">
           <EditableText
             key={`${slide.id}-text`}
             initialValue={slide.text}
@@ -39,9 +50,23 @@ export function SlideCard({ slide, index, total, onChange }: SlideCardProps) {
         </div>
 
         <div className="absolute inset-x-0 bottom-0 z-10 border-t border-white/10 bg-black/55 px-3.5 py-3 backdrop-blur-sm">
-          <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-white/45">
-            <ImageIcon className="h-3 w-3" />
-            Idée de visuel
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-white/45">
+              <ImageIcon className="h-3 w-3" />
+              Prompt image
+            </div>
+            <button
+              type="button"
+              onClick={() => void copyPrompt()}
+              className="inline-flex items-center gap-1 rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-medium text-white/80 hover:bg-white/15"
+            >
+              {copiedPrompt ? (
+                <Check className="h-3 w-3 text-[#5ac8fa]" />
+              ) : (
+                <Copy className="h-3 w-3" />
+              )}
+              {copiedPrompt ? "Copié" : "Copier"}
+            </button>
           </div>
           <EditableText
             key={`${slide.id}-visual`}

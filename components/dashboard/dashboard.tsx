@@ -31,7 +31,11 @@ export function Dashboard() {
               </p>
               {guide ? (
                 <div className="mt-3 flex-1">
-                  <ToolTutorial guide={guide} compact />
+                  <ToolTutorial
+                    guide={guide}
+                    compact
+                    showStatus={tool.href !== "/repurpose"}
+                  />
                 </div>
               ) : null}
             </Link>

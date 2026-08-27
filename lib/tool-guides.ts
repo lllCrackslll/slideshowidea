@@ -9,11 +9,24 @@ export type ToolGuide = {
 export const TOOL_GUIDES: Record<string, ToolGuide> = {
   "/content-engine": {
     status: "functional",
-    statusHint: "3 étapes : générer, éditer, télécharger le pack.",
+    statusHint:
+      "4 étapes : générer, copier les prompts, importer 5 images, pack multi-comptes.",
     steps: [
-      "Étape 1 : choisis Motivation ou Conseil → Générer 3 carrousels.",
-      "Étape 2 : modifie les textes et la légende si besoin.",
-      "Étape 3 : télécharge le pack (nombre de comptes = Planning).",
+      "Étape 1 : choisis Motivation ou Conseil → Générer le carrousel.",
+      "Étape 2 : édite les textes, copie les prompts image dans ton IA.",
+      "Étape 3 : importe tes 5 images verticales (1 par slide).",
+      "Étape 4 : télécharge le pack pour tous tes comptes (Planning).",
+    ],
+  },
+  "/repurpose": {
+    status: "partial",
+    statusHint:
+      "Filtres TikFusion via FFmpeg WASM. Vidéos courtes (< ~60 s, < ~50 Mo) recommandées.",
+    steps: [
+      "Choisis un preset (Instagram, TikTok) ou ajuste les filtres à droite.",
+      "Dépose une ou plusieurs vidéos MP4/MOV/MKV.",
+      "Règle le nombre de copies par fichier et ajoute un watermark si besoin.",
+      "Clique Générer les variantes — chaque MP4 unique se télécharge.",
     ],
   },
   "/planning": {
