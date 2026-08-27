@@ -9,8 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@ffmpeg/ffmpeg": "^0.12.15",
-    "@ffmpeg/util": "^0.12.2",
     "file-saver": "^2.0.5",
     "jszip": "^3.10.1",
     "lucide-react": "^1.34.0",

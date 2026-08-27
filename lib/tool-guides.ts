@@ -18,17 +18,6 @@ export const TOOL_GUIDES: Record<string, ToolGuide> = {
       "Banque de hooks pour le slide 1 · b-roll perso pour des visuels uniques.",
     ],
   },
-  "/repurpose": {
-    status: "partial",
-    statusHint:
-      "Tous les filtres TikFusion sont portés (FFmpeg WASM). Vidéos courtes (< ~60 s, < ~50 Mo) recommandées — le premier lancement charge ~30 Mo.",
-    steps: [
-      "Choisis un preset (Instagram, TikTok) ou ajuste les filtres à droite.",
-      "Dépose une ou plusieurs vidéos MP4/MOV/MKV.",
-      "Règle le nombre de copies par fichier et ajoute un watermark si besoin.",
-      "Clique Générer les variantes — chaque MP4 unique se télécharge automatiquement.",
-    ],
-  },
   "/image-spoofer": {
     status: "functional",
     statusHint:
@@ -40,35 +29,13 @@ export const TOOL_GUIDES: Record<string, ToolGuide> = {
       "Clique Exporter l'image pour télécharger le JPEG modifié.",
     ],
   },
-  "/faceswap": {
-    status: "unavailable",
-    statusHint:
-      "Interface seulement — TikFusion desktop utilise une API cloud propriétaire non incluse ici.",
-    steps: [
-      "Sélectionne une image source (visage) et une cible (image ou vidéo).",
-      "Le bouton reste désactivé tant qu'aucune API backend n'est branchée.",
-      "Pour l'activer : connecte ta propre API Face Swap côté serveur, ou utilise TikFusion desktop.",
-    ],
-  },
   "/converter": {
-    status: "partial",
-    statusHint:
-      "Image → JPEG : instantané. Vidéo → MP4 et GIF : FFmpeg WASM (vidéos courtes, ~30 Mo au 1er chargement).",
+    status: "functional",
+    statusHint: "Conversion PNG/WebP → JPEG locale et instantanée.",
     steps: [
-      "Choisis l'onglet Image, Video ou GIF.",
-      "Dépose ton fichier dans la zone — la conversion démarre automatiquement.",
-      "Image : conversion locale immédiate en JPEG.",
-      "Vidéo/GIF : attends le chargement FFmpeg puis le téléchargement du fichier converti.",
-    ],
-  },
-  "/detector": {
-    status: "partial",
-    statusHint:
-      "Comparaison pixel sur images uniquement — score indicatif, pas le SSIM vidéo du desktop TikFusion.",
-    steps: [
-      "Dépose deux images (PNG, JPG, WebP) — pas de vidéo.",
-      "Clique Comparer pour obtenir un score de similarité en %.",
-      "> 85 % = très similaires (risque doublon), < 60 % = plutôt différents.",
+      "Dépose une image PNG, JPG ou WebP.",
+      "La conversion démarre automatiquement.",
+      "Le JPEG se télécharge immédiatement.",
     ],
   },
   "/reducer": {
@@ -83,9 +50,9 @@ export const TOOL_GUIDES: Record<string, ToolGuide> = {
   },
   "/docs": {
     status: "functional",
-    statusHint: "Page d'aide statique — pas de traitement média.",
+    statusHint: "Page d'aide statique.",
     steps: [
-      "Consulte le résumé de chaque outil et les limites vs TikFusion desktop.",
+      "Consulte le résumé de chaque outil disponible.",
       "Reviens ici si tu hésites sur quel outil utiliser.",
     ],
   },

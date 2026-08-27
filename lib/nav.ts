@@ -1,12 +1,9 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BookOpen,
-  Clapperboard,
   FileDown,
-  GitCompare,
   ImageIcon,
   LayoutDashboard,
-  ScanFace,
   Sparkles,
   Wand2,
 } from "lucide-react";
@@ -21,13 +18,9 @@ export type NavItem = {
 const TOOL_DESCRIPTIONS: Record<string, string> = {
   "/content-engine":
     "Génère des carrousels et exporte un pack prêt pour 10–20 comptes TikTok.",
-  "/repurpose":
-    "Crée des variantes uniques de vidéos (filtres, metadata, watermark).",
   "/image-spoofer":
-    "Transforme des images pour éviter les doublons détectés.",
-  "/faceswap": "Échange de visages sur images ou courtes vidéos.",
-  "/converter": "Convertit images, vidéos et GIF entre formats.",
-  "/detector": "Compare deux fichiers et estime leur similarité.",
+    "Transforme des images pour créer des variantes uniques.",
+  "/converter": "Convertit PNG/WebP en JPEG instantanément.",
   "/reducer": "Réduit le poids des images en JPEG.",
   "/docs": "Guide d'utilisation des outils.",
 };
@@ -35,11 +28,8 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
 export const MAIN_NAV: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/content-engine", label: "Content Engine", icon: Sparkles },
-  { href: "/repurpose", label: "Repurpose", icon: Clapperboard },
   { href: "/image-spoofer", label: "Image Spoofer", icon: Wand2 },
-  { href: "/faceswap", label: "Face Swap", icon: ScanFace },
   { href: "/converter", label: "Converter", icon: ImageIcon },
-  { href: "/detector", label: "Detector", icon: GitCompare },
   { href: "/reducer", label: "Reducer", icon: FileDown },
   { href: "/docs", label: "Docs", icon: BookOpen },
 ];

@@ -5,7 +5,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Kognia Studio",
   description:
-    "Suite d'outils créatifs : carrousels TikTok, repurposing, conversion média.",
+    "Suite carrousels TikTok : génération, distribution multi-comptes, outils image.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

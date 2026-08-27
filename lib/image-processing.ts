@@ -115,30 +115,3 @@ export function downloadBlob(blob: Blob, filename: string): void {
   a.click();
   URL.revokeObjectURL(url);
 }
-
-export async function compareImagesSimilarity(
-  a: File,
-  b: File,
-): Promise<number> {
-  const [imgA, imgB] = await Promise.all([loadImageFile(a), loadImageFile(b)]);
-  const size = 128;
-  const canvasA = document.createElement("canvas");
-  const canvasB = document.createElement("canvas");
-  canvasA.width = canvasB.width = size;
-  canvasA.height = canvasB.height = size;
-  const ctxA = canvasA.getContext("2d")!;
-  const ctxB = canvasB.getContext("2d")!;
-  ctxA.drawImage(imgA, 0, 0, size, size);
-  ctxB.drawImage(imgB, 0, 0, size, size);
-  const dataA = ctxA.getImageData(0, 0, size, size).data;
-  const dataB = ctxB.getImageData(0, 0, size, size).data;
-  let diff = 0;
-  for (let i = 0; i < dataA.length; i += 4) {
-    diff +=
-      Math.abs(dataA[i] - dataB[i]) +
-      Math.abs(dataA[i + 1] - dataB[i + 1]) +
-      Math.abs(dataA[i + 2] - dataB[i + 2]);
-  }
-  const maxDiff = size * size * 3 * 255;
-  return Math.max(0, Math.min(100, 100 - (diff / maxDiff) * 100));
-}
