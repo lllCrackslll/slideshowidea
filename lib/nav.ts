@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  BookOpen,
+  CalendarClock,
   FileDown,
   ImageIcon,
   LayoutDashboard,
@@ -17,12 +17,13 @@ export type NavItem = {
 
 const TOOL_DESCRIPTIONS: Record<string, string> = {
   "/content-engine":
-    "Génère des carrousels et exporte un pack prêt pour 10–20 comptes TikTok.",
+    "Génère des carrousels et exporte un pack prêt pour tes comptes TikTok.",
   "/image-spoofer":
     "Transforme des images pour créer des variantes uniques.",
   "/converter": "Convertit PNG/WebP en JPEG instantanément.",
   "/reducer": "Réduit le poids des images en JPEG.",
-  "/docs": "Guide d'utilisation des outils.",
+  "/planning":
+    "Gère tes comptes, horaires et coche chaque publication du jour.",
 };
 
 export const MAIN_NAV: NavItem[] = [
@@ -31,7 +32,7 @@ export const MAIN_NAV: NavItem[] = [
   { href: "/image-spoofer", label: "Image Spoofer", icon: Wand2 },
   { href: "/converter", label: "Converter", icon: ImageIcon },
   { href: "/reducer", label: "Reducer", icon: FileDown },
-  { href: "/docs", label: "Docs", icon: BookOpen },
+  { href: "/planning", label: "Planning", icon: CalendarClock },
 ];
 
 export const DASHBOARD_TOOLS: NavItem[] = MAIN_NAV.filter(

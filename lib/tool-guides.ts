@@ -9,11 +9,21 @@ export type ToolGuide = {
 export const TOOL_GUIDES: Record<string, ToolGuide> = {
   "/content-engine": {
     status: "functional",
-    statusHint: "3 étapes simples : générer, éditer, télécharger le pack.",
+    statusHint: "3 étapes : générer, éditer, télécharger le pack.",
     steps: [
       "Étape 1 : choisis Motivation ou Conseil → Générer 3 carrousels.",
       "Étape 2 : modifie les textes et la légende si besoin.",
-      "Étape 3 : télécharge le pack et publie sur TikTok.",
+      "Étape 3 : télécharge le pack (nombre de comptes = Planning).",
+    ],
+  },
+  "/planning": {
+    status: "functional",
+    statusHint:
+      "Configure tes comptes une fois, coche chaque post publié dans la journée.",
+    steps: [
+      "Règle le nombre de comptes et de posts par jour.",
+      "Renomme chaque compte TikTok.",
+      "Suis le planning horaire et coche au fur et à mesure.",
     ],
   },
   "/image-spoofer": {
@@ -44,14 +54,6 @@ export const TOOL_GUIDES: Record<string, ToolGuide> = {
       "Règle le curseur Qualité JPEG (30–95 %).",
       "Dépose une image — la compression démarre automatiquement.",
       "Le fichier réduit se télécharge et le message indique Ko avant → après.",
-    ],
-  },
-  "/docs": {
-    status: "functional",
-    statusHint: "Page d'aide statique.",
-    steps: [
-      "Consulte le résumé de chaque outil disponible.",
-      "Reviens ici si tu hésites sur quel outil utiliser.",
     ],
   },
 };

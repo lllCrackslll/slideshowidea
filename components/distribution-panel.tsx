@@ -1,18 +1,14 @@
 "use client";
 
-import { Check, Copy, Loader2, Package } from "lucide-react";
-import { useMemo, useState } from "react";
-import {
-  AccountNamesPanel,
-  getAccountNames,
-} from "@/components/distribution/account-names-panel";
-import { BrollUploadPanel } from "@/components/distribution/broll-upload-panel";
+import { Check, Copy, ExternalLink, Loader2, Package } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { DistributionSection } from "@/components/distribution/distribution-section";
+import { BrollUploadPanel } from "@/components/distribution/broll-upload-panel";
 import { HooksBankPanel } from "@/components/distribution/hooks-bank-panel";
-import { PublishChecklistPanel } from "@/components/distribution/publish-checklist-panel";
+import { getAccountNames } from "@/components/distribution/account-names-panel";
 import { copyText } from "@/lib/clipboard";
-import { makeSessionId } from "@/lib/distribution/checklist";
-import { buildPublishPlan } from "@/lib/distribution/planning";
+import { loadPlanningSettings } from "@/lib/distribution/planning-settings";
 import { savePackHistoryEntry } from "@/lib/distribution/pack-history";
 import type { Carousel } from "@/lib/types";
 import {
@@ -35,46 +31,21 @@ export function DistributionPanel({
   disabled = false,
   onApplyHook,
 }: DistributionPanelProps) {
-  const [accountCount, setAccountCount] = useState(10);
-  const [accountsVersion, setAccountsVersion] = useState(0);
+  const [planning, setPlanning] = useState(loadPlanningSettings);
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [copiedCaption, setCopiedCaption] = useState(false);
 
   const hasQueue = carouselQueue.length > 1;
+  const accountCount = planning.accountCount;
+
+  useEffect(() => {
+    setPlanning(loadPlanningSettings());
+  }, []);
 
   const accountNames = useMemo(
     () => getAccountNames(accountCount),
-    [accountCount, accountsVersion],
-  );
-
-  const splitPreview = hasQueue
-    ? splitAccountsAcrossConcepts(carouselQueue.length, accountCount)
-    : null;
-
-  const planConcepts = useMemo(() => {
-    if (!splitPreview) return undefined;
-    return carouselQueue.map((item, index) => ({
-      label: item.topic,
-      accountCount: splitPreview[index],
-    }));
-  }, [carouselQueue, splitPreview]);
-
-  const planSlots = useMemo(
-    () =>
-      buildPublishPlan({
-        accountCount,
-        accountNames,
-        concepts: planConcepts,
-        startHour: 8,
-        startMinute: 0,
-        intervalMinutes: 25,
-      }),
-    [accountCount, accountNames, planConcepts],
-  );
-
-  const sessionId = makeSessionId(
-    hasQueue ? `daily-${carouselQueue.length}` : carousel.topic,
+    [accountCount],
   );
 
   async function copyCaption() {
@@ -116,7 +87,9 @@ export function DistributionPanel({
           conceptCount: carouselQueue.length,
           packType: "daily",
         });
-        setProgress(`Pack prêt — ${accountCount} comptes, ${carouselQueue.length} carrousels.`);
+        setProgress(
+          `Pack prêt — ${accountCount} comptes, ${carouselQueue.length} carrousels.`,
+        );
       } else {
         await downloadDistributionPack({
           slides: slidesToExportFormat(carousel.slides),
@@ -148,28 +121,22 @@ export function DistributionPanel({
   return (
     <section className="k-card-glow">
       <p className="k-label mb-1">Étape 3</p>
-      <h2 className="k-subheading">Télécharger & publier</h2>
+      <h2 className="k-subheading">Télécharger</h2>
       <p className="mt-1 text-xs text-[#86868b]">
-        1 dossier = 1 compte TikTok. Chaque dossier contient 5 images + la
-        légende à coller.
+        Export pour{" "}
+        <strong className="font-medium text-[#1d1d1f]">
+          {accountCount} comptes
+        </strong>{" "}
+        (réglé dans Planning). 1 dossier = 5 images + légende.
       </p>
 
-      <label className="mt-4 block text-xs text-[#86868b]">
-        Nombre de comptes TikTok
-        <div className="mt-2 flex items-center gap-3">
-          <input
-            type="range"
-            min={3}
-            max={20}
-            value={accountCount}
-            onChange={(e) => setAccountCount(Number(e.target.value))}
-            className="w-full accent-[#007aff]"
-          />
-          <span className="w-8 text-sm font-semibold text-[#1d1d1f]">
-            {accountCount}
-          </span>
-        </div>
-      </label>
+      <Link
+        href="/planning"
+        className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-[#007aff] hover:underline"
+      >
+        Modifier mes comptes dans Planning
+        <ExternalLink className="h-3 w-3" />
+      </Link>
 
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">
         <button
@@ -205,58 +172,24 @@ export function DistributionPanel({
 
       <div className="mt-5 rounded-xl border border-[rgba(0,122,255,0.1)] bg-white/80 p-3">
         <p className="text-xs font-medium text-[#1d1d1f]">
-          Comment publier sur TikTok
+          Comment publier
         </p>
         <ol className="mt-2 space-y-1.5 text-[11px] text-[#86868b]">
-          <li>1. Dézippe le pack — ouvre un dossier par compte.</li>
-          <li>2. TikTok → Créer → Photo → importe slide-1 à slide-5.</li>
-          <li>3. Colle la légende (caption.txt ou bouton ci-dessus).</li>
-          <li>4. Publie, puis coche le compte dans la checklist.</li>
+          <li>1. Dézippe — 1 dossier par compte.</li>
+          <li>2. TikTok → Créer → Photo → slide-1 à slide-5.</li>
+          <li>3. Colle la légende, publie.</li>
+          <li>
+            4. Coche dans{" "}
+            <Link href="/planning" className="text-[#007aff] hover:underline">
+              Planning
+            </Link>
+            .
+          </li>
         </ol>
       </div>
 
-      <div className="mt-4 space-y-2">
-        <p className="text-xs font-medium text-[#1d1d1f]">
-          Planning du jour
-        </p>
-        <ul className="max-h-40 space-y-1 overflow-y-auto">
-          {planSlots.slice(0, 8).map((slot) => (
-            <li
-              key={slot.id}
-              className="flex items-center justify-between rounded-lg bg-[rgba(0,122,255,0.04)] px-2.5 py-1.5 text-[11px]"
-            >
-              <span className="truncate text-[#424245]">{slot.accountLabel}</span>
-              <span className="shrink-0 font-medium tabular-nums text-[#007aff]">
-                {slot.time}
-              </span>
-            </li>
-          ))}
-          {planSlots.length > 8 ? (
-            <li className="text-center text-[10px] text-[#aeaeb2]">
-              +{planSlots.length - 8} autres comptes…
-            </li>
-          ) : null}
-        </ul>
-      </div>
-
-      <div className="mt-4">
-        <p className="mb-2 text-xs font-medium text-[#1d1d1f]">
-          Checklist
-        </p>
-        <PublishChecklistPanel sessionId={sessionId} slots={planSlots} />
-      </div>
-
-      <DistributionSection title="Options avancées" subtitle="Facultatif">
+      <DistributionSection title="Options" subtitle="Facultatif">
         <div className="space-y-4">
-          <div>
-            <p className="mb-2 text-xs font-medium text-[#1d1d1f]">
-              Renommer tes comptes
-            </p>
-            <AccountNamesPanel
-              accountCount={accountCount}
-              onChange={() => setAccountsVersion((v) => v + 1)}
-            />
-          </div>
           {onApplyHook ? (
             <div>
               <p className="mb-2 text-xs font-medium text-[#1d1d1f]">
@@ -267,7 +200,7 @@ export function DistributionPanel({
           ) : null}
           <div>
             <p className="mb-2 text-xs font-medium text-[#1d1d1f]">
-              Tes propres fonds d&apos;image
+              Fonds d&apos;image perso
             </p>
             <BrollUploadPanel />
           </div>

@@ -1,10 +1,18 @@
-import { accountFolderSlug, defaultAccountName } from "./accounts";
-import type { PublishSlot } from "./types";
+import { defaultAccountName } from "./accounts";
 
-type BuildPlanInput = {
+export type ScheduleItem = {
+  id: string;
+  accountIndex: number;
+  accountLabel: string;
+  postNumber: number;
+  time: string;
+  sortKey: number;
+};
+
+type BuildScheduleInput = {
   accountCount: number;
+  postsPerDay: number;
   accountNames?: string[];
-  concepts?: Array<{ label: string; accountCount: number }>;
   startHour?: number;
   startMinute?: number;
   intervalMinutes?: number;
@@ -20,66 +28,87 @@ function addMinutes(h: number, m: number, delta: number): [number, number] {
   return [Math.floor(day / 60), day % 60];
 }
 
-/** Horaires décalés par compte — affichage uniquement (pas d'export CSV). */
-export function buildPublishPlan(input: BuildPlanInput): PublishSlot[] {
+/** Horaires du jour : chaque compte × N posts, espacés. */
+export function buildDailySchedule(input: BuildScheduleInput): ScheduleItem[] {
   const {
     accountCount,
+    postsPerDay,
     accountNames = [],
-    concepts,
     startHour = 8,
     startMinute = 0,
     intervalMinutes = 25,
   } = input;
 
-  const slots: PublishSlot[] = [];
-  let slotIndex = 0;
+  const items: ScheduleItem[] = [];
   let [hour, minute] = [startHour, startMinute];
+  let sortKey = 0;
 
-  if (concepts && concepts.length > 0) {
+  for (let postNumber = 1; postNumber <= postsPerDay; postNumber += 1) {
+    for (let accountIndex = 0; accountIndex < accountCount; accountIndex += 1) {
+      const accountLabel =
+        accountNames[accountIndex]?.trim() ||
+        defaultAccountName(accountIndex);
+
+      items.push({
+        id: `${accountIndex}-post-${postNumber}`,
+        accountIndex,
+        accountLabel,
+        postNumber,
+        time: padTime(hour, minute),
+        sortKey,
+      });
+
+      [hour, minute] = addMinutes(hour, minute, intervalMinutes);
+      sortKey += 1;
+    }
+  }
+
+  return items;
+}
+
+/** @deprecated use buildDailySchedule */
+export function buildPublishPlan(input: {
+  accountCount: number;
+  accountNames?: string[];
+  concepts?: Array<{ label: string; accountCount: number }>;
+  startHour?: number;
+  startMinute?: number;
+  intervalMinutes?: number;
+}): ScheduleItem[] {
+  if (input.concepts?.length) {
     let globalIndex = 0;
-    for (const concept of concepts) {
+    const items: ScheduleItem[] = [];
+    let [hour, minute] = [input.startHour ?? 8, input.startMinute ?? 0];
+    let sortKey = 0;
+    const interval = input.intervalMinutes ?? 25;
+
+    for (const concept of input.concepts) {
       for (let i = 0; i < concept.accountCount; i += 1) {
-        const accountIndex = globalIndex;
         const label =
-          accountNames[accountIndex]?.trim() ||
-          defaultAccountName(accountIndex);
-        slots.push({
-          id: `slot-${accountIndex}`,
-          accountIndex,
+          input.accountNames?.[globalIndex]?.trim() ||
+          defaultAccountName(globalIndex);
+        items.push({
+          id: `slot-${globalIndex}`,
+          accountIndex: globalIndex,
           accountLabel: label,
-          conceptLabel: concept.label,
+          postNumber: 1,
           time: padTime(hour, minute),
-          sortKey: slotIndex,
+          sortKey,
         });
-        [hour, minute] = addMinutes(hour, minute, intervalMinutes);
-        slotIndex += 1;
+        [hour, minute] = addMinutes(hour, minute, interval);
+        sortKey += 1;
         globalIndex += 1;
       }
     }
-    return slots;
+    return items;
   }
 
-  for (let accountIndex = 0; accountIndex < accountCount; accountIndex += 1) {
-    const label =
-      accountNames[accountIndex]?.trim() ||
-      defaultAccountName(accountIndex);
-    slots.push({
-      id: `slot-${accountIndex}`,
-      accountIndex,
-      accountLabel: label,
-      conceptLabel: "Carrousel du jour",
-      time: padTime(hour, minute),
-      sortKey: slotIndex,
-    });
-    [hour, minute] = addMinutes(hour, minute, intervalMinutes);
-    slotIndex += 1;
-  }
-
-  return slots;
-}
-
-export function accountKeysFromPlan(slots: PublishSlot[]): string[] {
-  return slots.map(
-    (s) => accountFolderSlug(s.accountLabel, s.accountIndex),
-  );
+  return buildDailySchedule({
+    accountCount: input.accountCount,
+    postsPerDay: 1,
+    accountNames: input.accountNames,
+    startHour: input.startHour,
+    startMinute: input.startMinute,
+    intervalMinutes: input.intervalMinutes,
+  });
 }
