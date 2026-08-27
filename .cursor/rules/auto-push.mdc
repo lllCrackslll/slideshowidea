@@ -1,0 +1,22 @@
+---
+description: Pousser sur GitHub après chaque modification de code
+alwaysApply: true
+---
+
+# Push automatique après chaque modif
+
+Après **chaque** série de modifications de code (feature, fix, refactor), **commit et push** sur `origin/main` sans attendre que l'utilisateur le demande.
+
+## Workflow
+
+1. Terminer les changements et vérifier que le build/lint passe si pertinent.
+2. `git add` les fichiers pertinents (jamais `.env`, secrets, credentials).
+3. Commit avec un message concis en français ou anglais (style du repo).
+4. `git push origin main` (ou la branche courante si ce n'est pas main).
+5. Confirmer à l'utilisateur le hash du commit et que le push a réussi.
+
+## Exceptions
+
+- Ne pas commit si l'utilisateur a explicitement demandé de ne pas le faire.
+- Ne pas pousser de fichiers sensibles.
+- Ne pas force-push sur main.
