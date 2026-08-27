@@ -1,3 +1,4 @@
+import { AppTabBar } from "@/components/shell/app-tab-bar";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -13,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Kognia Content Engine",
+  title: "Kognia Studio",
   description:
-    "Outil interne pour générer et prévisualiser des carrousels TikTok study / étudiant.",
+    "Suite d'outils créatifs : carrousels TikTok, repurposing, conversion média.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -24,7 +25,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="fr"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <AppTabBar />
+        <main className="flex-1">{children}</main>
+      </body>
     </html>
   );
 }

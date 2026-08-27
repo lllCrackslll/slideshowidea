@@ -1,5 +1,5 @@
-import { ContentEngineApp } from "@/components/content-engine-app";
+import { Dashboard } from "@/components/dashboard/dashboard";
 
-export default function Home() {
-  return <ContentEngineApp />;
+export default function HomePage() {
+  return <Dashboard />;
 }

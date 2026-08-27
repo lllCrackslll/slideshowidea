@@ -81,8 +81,13 @@ function userPromptFor(
 export async function POST(request: Request) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
+    const hint =
+      process.env.VERCEL === "1"
+        ? "Ajoute OPENAI_API_KEY dans Vercel → Project → Settings → Environment Variables, puis redeploie."
+        : "Ajoute OPENAI_API_KEY dans .env.local à la racine du projet, puis redémarre npm run dev.";
+
     return NextResponse.json(
-      { error: "OPENAI_API_KEY manquante. Ajoute-la dans .env.local." },
+      { error: `OPENAI_API_KEY manquante. ${hint}` },
       { status: 500 },
     );
   }
