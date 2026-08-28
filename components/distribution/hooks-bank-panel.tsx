@@ -33,7 +33,7 @@ export function HooksBankPanel({ onApplyHook }: HooksBankPanelProps) {
 
   return (
     <div className="space-y-3">
-      <p className="text-[11px] text-[#86868b]">
+      <p className="text-[11px] k-text-muted">
         50 accroches prêtes pour le slide 1 — clique pour l&apos;appliquer.
       </p>
 
@@ -80,9 +80,9 @@ export function HooksBankPanel({ onApplyHook }: HooksBankPanelProps) {
             <button
               type="button"
               onClick={() => onApplyHook(hook)}
-              className="flex w-full items-start gap-2 rounded-xl border border-[rgba(0,122,255,0.1)] bg-white/90 px-3 py-2 text-left text-[11px] leading-snug text-[#424245] transition-all hover:border-[rgba(0,122,255,0.3)] hover:bg-[rgba(0,122,255,0.04)]"
+              className="k-list-item w-full text-left text-[11px] leading-snug k-text-secondary"
             >
-              <Zap className="mt-0.5 h-3 w-3 shrink-0 text-[#007aff]" />
+              <Zap className="mt-0.5 h-3 w-3 shrink-0 k-accent" />
               {hook}
             </button>
           </li>

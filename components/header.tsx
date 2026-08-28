@@ -14,10 +14,10 @@ export function Header({
   canDownload,
 }: HeaderProps) {
   return (
-    <header className="k-divider bg-white/50 backdrop-blur-sm">
+    <header className="k-divider backdrop-blur-sm" style={{ background: "var(--surface-nav)" }}>
       <div className="mx-auto flex max-w-[1400px] flex-col gap-2 px-4 py-3 sm:h-14 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5 sm:py-0">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-sm font-semibold tracking-tight text-[#1d1d1f]">
+          <h1 className="k-subheading text-sm font-semibold tracking-tight">
             Content Engine
           </h1>
           <span className="k-badge">Distribution TikTok</span>

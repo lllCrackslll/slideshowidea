@@ -46,8 +46,9 @@ export function SlideImagesPanel({
   return (
     <div>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="text-xs text-[#86868b]">
-          1 image par slide — format vertical 9:16 recommandé.
+        <p className="text-xs k-text-muted">
+          Optionnel — sans images, des fonds sombres avec texte sont générés à
+          l&apos;export.
         </p>
         <span className="k-badge">{readyCount}/5</span>
       </div>
@@ -55,7 +56,7 @@ export function SlideImagesPanel({
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         {images.map((src, index) => (
           <li key={index}>
-            <p className="mb-1.5 text-center text-[10px] font-medium uppercase tracking-wider text-[#aeaeb2]">
+            <p className="mb-1.5 text-center text-[10px] font-medium uppercase tracking-wider k-text-faint">
               Slide {index + 1}
             </p>
             {src ? (
@@ -70,18 +71,18 @@ export function SlideImagesPanel({
                   type="button"
                   disabled={disabled}
                   onClick={() => clearSlide(index)}
-                  className="absolute right-1.5 top-1.5 rounded-full bg-white/95 p-1 shadow ring-1 ring-[rgba(0,122,255,0.15)]"
+                  className="absolute right-1.5 top-1.5 k-theme-toggle h-6 w-6 p-0"
                   aria-label={`Retirer slide ${index + 1}`}
                 >
-                  <X className="h-3 w-3 text-[#86868b]" />
+                  <X className="h-3 w-3" />
                 </button>
               </div>
             ) : (
               <label
-                className={`flex aspect-[9/16] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[rgba(0,122,255,0.25)] bg-[rgba(0,122,255,0.03)] transition-colors hover:bg-[rgba(0,122,255,0.06)] ${disabled ? "pointer-events-none opacity-50" : ""}`}
+                className={`k-slide-slot-empty ${disabled ? "pointer-events-none opacity-50" : ""}`}
               >
-                <ImagePlus className="h-5 w-5 text-[#007aff]" />
-                <span className="text-[10px] font-medium text-[#86868b]">
+                <ImagePlus className="h-5 w-5 k-accent" />
+                <span className="text-[10px] font-medium k-text-muted">
                   Ajouter
                 </span>
                 <input

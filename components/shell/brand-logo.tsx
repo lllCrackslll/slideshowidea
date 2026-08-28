@@ -2,23 +2,16 @@ import Link from "next/link";
 
 type BrandLogoProps = {
   className?: string;
-  size?: "sm" | "md";
 };
 
-export function BrandLogo({ className = "", size = "md" }: BrandLogoProps) {
-  const textSize = size === "sm" ? "text-sm" : "text-base sm:text-lg";
-
+export function BrandLogo({ className = "" }: BrandLogoProps) {
   return (
     <Link
       href="/"
-      className={`group inline-flex shrink-0 items-baseline font-semibold tracking-tight ${textSize} ${className}`}
+      className={`group inline-flex shrink-0 items-center gap-0.5 text-base font-bold tracking-tight sm:text-lg ${className}`}
     >
-      <span className="text-[#1d1d1f] transition-colors group-hover:text-black">
-        carrousels
-      </span>
-      <span className="text-[#007aff] transition-colors group-hover:text-[#0066d6]">
-        .studio
-      </span>
+      <span className="k-text">carrousels</span>
+      <span className="k-accent">.studio</span>
     </Link>
   );
 }

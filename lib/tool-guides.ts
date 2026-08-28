@@ -10,63 +10,55 @@ export const TOOL_GUIDES: Record<string, ToolGuide> = {
   "/content-engine": {
     status: "functional",
     statusHint:
-      "4 étapes : générer, copier les prompts, importer 5 images, pack multi-comptes.",
+      "3 étapes : créer (source US ou IA), affiner, export multi-comptes.",
     steps: [
-      "Étape 1 : choisis Motivation ou Conseil → Générer le carrousel.",
-      "Étape 2 : édite les textes, copie les prompts image dans ton IA.",
-      "Étape 3 : importe tes 5 images verticales (1 par slide).",
-      "Étape 4 : télécharge le pack pour tous tes comptes (Planning).",
+      "Configure ton app une fois (nom, handle, niche).",
+      "Colle une source US ou génère un carrousel → édite les textes.",
+      "Exporte le ZIP pour tous tes comptes — fonds auto ou images custom.",
     ],
   },
   "/repurpose": {
     status: "partial",
     statusHint:
-      "FFmpeg multi-thread dans le navigateur. Vidéos courtes (< ~60 s) pour un traitement rapide.",
+      "FFmpeg dans le navigateur. Vidéos courtes (< ~60 s) recommandées.",
     steps: [
-      "Choisis un preset (Instagram, TikTok) ou ajuste les filtres à droite.",
+      "Choisis un preset ou ajuste les filtres.",
       "Dépose une ou plusieurs vidéos MP4/MOV/MKV.",
-      "Règle le nombre de copies par fichier et ajoute un watermark si besoin.",
-      "Clique Générer — liste des vidéos cliquables, puis ZIP en bas.",
+      "Génère les variantes → télécharge une vidéo ou le ZIP.",
     ],
   },
   "/planning": {
     status: "functional",
-    statusHint:
-      "Configure tes comptes une fois, coche chaque post publié dans la journée.",
+    statusHint: "Comptes, horaires, checklist journalière + règles anti-ban.",
     steps: [
-      "Règle le nombre de comptes et de posts par jour.",
+      "Règle le nombre de comptes et l'écart entre posts.",
       "Renomme chaque compte TikTok.",
-      "Suis le planning horaire et coche au fur et à mesure.",
+      "Publie depuis le ZIP Studio, coche chaque post publié.",
     ],
   },
   "/image-spoofer": {
     status: "functional",
-    statusHint:
-      "Traitement 100 % local dans le navigateur (Canvas) — instantané, sans upload serveur.",
+    statusHint: "Traitement local Canvas — sans upload serveur.",
     steps: [
       "Dépose une image PNG, JPG ou WebP.",
-      "Ajuste luminosité, contraste, saturation (onglet Advanced : rotation, bruit, bordure floue, flip).",
-      "Vérifie l'aperçu en direct à droite.",
-      "Clique Exporter l'image pour télécharger le JPEG modifié.",
+      "Ajuste luminosité, contraste, saturation.",
+      "Exporte le JPEG modifié.",
     ],
   },
   "/converter": {
     status: "functional",
-    statusHint: "Conversion PNG/WebP → JPEG locale et instantanée.",
+    statusHint: "Conversion PNG/WebP → JPEG locale.",
     steps: [
-      "Dépose une image PNG, JPG ou WebP.",
-      "La conversion démarre automatiquement.",
-      "Le JPEG se télécharge immédiatement.",
+      "Dépose une image.",
+      "Le JPEG se télécharge automatiquement.",
     ],
   },
   "/reducer": {
     status: "functional",
-    statusHint:
-      "Compression JPEG locale instantanée — affiche le poids avant/après.",
+    statusHint: "Compression JPEG locale.",
     steps: [
-      "Règle le curseur Qualité JPEG (30–95 %).",
-      "Dépose une image — la compression démarre automatiquement.",
-      "Le fichier réduit se télécharge et le message indique Ko avant → après.",
+      "Règle la qualité JPEG.",
+      "Dépose une image — téléchargement automatique.",
     ],
   },
 };

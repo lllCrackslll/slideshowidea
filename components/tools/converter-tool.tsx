@@ -46,8 +46,8 @@ export function ConverterTool() {
         }}
       />
 
-      {busy ? <p className="mt-3 text-xs text-[#86868b]">Traitement…</p> : null}
-      {message ? <p className="mt-3 text-xs text-[#424245]">{message}</p> : null}
+      {busy ? <p className="mt-3 text-xs k-text-muted">Traitement…</p> : null}
+      {message ? <p className="mt-3 text-xs k-text-secondary">{message}</p> : null}
 
       {getToolGuide("/converter") ? (
         <ToolTutorial guide={getToolGuide("/converter")!} className="mt-6" />

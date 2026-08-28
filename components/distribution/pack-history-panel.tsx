@@ -22,24 +22,24 @@ export function PackHistoryPanel() {
 
   return (
     <div className="space-y-3">
-      <p className="text-[11px] text-[#86868b]">
+      <p className="text-[11px] k-text-muted">
         Derniers packs exportés (stockés localement dans ton navigateur).
       </p>
 
       {entries.length === 0 ? (
-        <p className="text-xs text-[#aeaeb2]">Aucun export enregistré.</p>
+        <p className="text-xs k-text-faint">Aucun export enregistré.</p>
       ) : (
         <ul className="max-h-56 space-y-2 overflow-y-auto">
           {entries.map((entry) => (
             <li
               key={entry.id}
-              className="flex items-start gap-2 rounded-xl border border-[rgba(0,122,255,0.1)] bg-white/90 px-3 py-2.5"
+              className="k-list-item flex items-start gap-2"
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-[#1d1d1f]">
+                <p className="truncate text-sm font-medium k-text">
                   {entry.label}
                 </p>
-                <p className="text-[11px] text-[#86868b]">
+                <p className="text-[11px] k-text-muted">
                   {new Date(entry.createdAt).toLocaleString("fr-FR", {
                     dateStyle: "short",
                     timeStyle: "short",
@@ -57,7 +57,7 @@ export function PackHistoryPanel() {
                   deletePackHistoryEntry(entry.id);
                   refresh();
                 }}
-                className="shrink-0 rounded-lg p-1.5 text-[#aeaeb2] hover:bg-red-50 hover:text-red-500"
+                className="shrink-0 rounded-lg p-1.5 k-text-faint hover:bg-red-50 hover:text-red-500 dark:hover:text-red-400"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>

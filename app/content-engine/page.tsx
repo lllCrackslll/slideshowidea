@@ -1,5 +1,5 @@
-import { ContentEngineApp } from "@/components/content-engine-app";
+import { redirect } from "next/navigation";
 
 export default function ContentEnginePage() {
-  return <ContentEngineApp />;
+  redirect("/");
 }

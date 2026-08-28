@@ -31,7 +31,7 @@ function SliderRow({
 }) {
   return (
     <label className="block">
-      <div className="mb-1 flex justify-between text-xs text-[#86868b]">
+      <div className="mb-1 flex justify-between text-xs k-text-muted">
         <span>{label}</span>
         <span>{value}</span>
       </div>
@@ -148,7 +148,7 @@ export function ImageSpooferTool() {
                   value={adjustments.blurBorder}
                   onChange={(v) => patch({ blurBorder: v })}
                 />
-                <label className="flex items-center gap-2 text-xs text-[#86868b]">
+                <label className="flex items-center gap-2 text-xs k-text-muted">
                   <input
                     type="checkbox"
                     checked={adjustments.flipH}
@@ -156,7 +156,7 @@ export function ImageSpooferTool() {
                   />
                   Flip horizontal
                 </label>
-                <label className="flex items-center gap-2 text-xs text-[#86868b]">
+                <label className="flex items-center gap-2 text-xs k-text-muted">
                   <input
                     type="checkbox"
                     checked={adjustments.flipV}
@@ -185,7 +185,7 @@ export function ImageSpooferTool() {
               className="max-h-[420px] max-w-full rounded-lg object-contain"
             />
           ) : (
-            <p className="text-xs text-[#aeaeb2]">Aperçu ici</p>
+            <p className="text-xs k-text-faint">Aperçu ici</p>
           )}
         </div>
       </div>

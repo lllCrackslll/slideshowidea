@@ -6,31 +6,51 @@ import type { GenreId } from "@/lib/types";
 
 type ControlPanelProps = {
   genre: GenreId;
+  sourceText: string;
   busy: boolean;
   statusLabel?: string | null;
   error: string | null;
   onGenreChange: (genre: GenreId) => void;
+  onSourceTextChange: (text: string) => void;
   onGenerate: () => void;
 };
 
 export function ControlPanel({
   genre,
+  sourceText,
   busy,
   statusLabel,
   error,
   onGenreChange,
+  onSourceTextChange,
   onGenerate,
 }: ControlPanelProps) {
+  const hasSource = sourceText.trim().length > 20;
+
   return (
     <section className="k-card">
-      <p className="k-label mb-1">Étape 1</p>
+      <p className="k-label mb-1">Étape 1 · Créer</p>
       <h2 className="k-subheading">Générer le carrousel</h2>
-      <p className="mt-1 text-xs text-[#86868b]">
-        Un seul carrousel — tu le publieras ensuite sur tous tes comptes avec
-        des visuels légèrement différents.
+      <p className="mt-1 text-xs k-text-muted">
+        Colle un slideshow US trouvé sur TikTok, ou laisse vide pour une idée
+        originale générée par l&apos;IA.
       </p>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <label className="mt-4 block text-xs k-text-muted">
+        Source US (optionnel)
+        <textarea
+          value={sourceText}
+          onChange={(e) => onSourceTextChange(e.target.value)}
+          rows={4}
+          placeholder="Colle ici le texte anglais d'un slideshow qui performe…"
+          className="k-input mt-1 w-full resize-y px-3 py-2.5 text-sm leading-relaxed"
+        />
+      </label>
+
+      <p className="mt-4 text-[10px] font-semibold uppercase tracking-wider k-text-faint">
+        Angle
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2">
         {GENRES.map((item) => {
           const selected = item.id === genre;
           return (
@@ -54,11 +74,15 @@ export function ControlPanel({
         className="k-btn-primary mt-4 h-11 w-full sm:w-auto"
       >
         <Sparkles className={`h-4 w-4 ${busy ? "animate-pulse" : ""}`} />
-        {busy ? "Génération…" : "Générer le carrousel"}
+        {busy
+          ? "Génération…"
+          : hasSource
+            ? "Adapter en français"
+            : "Générer le carrousel"}
       </button>
 
       {statusLabel ? (
-        <p className="mt-2 text-xs font-medium text-[#007aff]">{statusLabel}</p>
+        <p className="mt-2 text-xs font-medium k-accent">{statusLabel}</p>
       ) : null}
 
       {error ? (

@@ -1,7 +1,8 @@
 "use client";
 
 import { Check, Copy } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { AppProfilePanel } from "@/components/app-profile-panel";
 import { CaptionSection } from "@/components/caption-section";
 import { ControlPanel } from "@/components/control-panel";
 import { DistributionPanel } from "@/components/distribution-panel";
@@ -11,6 +12,7 @@ import {
   emptySlideImages,
   type SlideImages,
 } from "@/components/slide-images-panel";
+import { DEFAULT_APP_PROFILE, loadAppProfile, type AppProfile } from "@/lib/app-profile";
 import { DEFAULT_CAROUSEL } from "@/lib/content-engine";
 import { copyText } from "@/lib/clipboard";
 import { buildAllImagePrompts } from "@/lib/image-prompts";
@@ -18,11 +20,20 @@ import { mapGeneratedToCarousel } from "@/lib/map-generated-carousel";
 import type { GenerateResponse } from "@/lib/api-types";
 import type { Carousel, GenreId, Slide } from "@/lib/types";
 
-async function fetchCarousel(genre: GenreId): Promise<Carousel> {
+async function fetchCarousel(
+  genre: GenreId,
+  profile: AppProfile,
+  sourceText: string,
+): Promise<Carousel> {
   const response = await fetch("/api/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ genre, format: "short" }),
+    body: JSON.stringify({
+      genre,
+      format: "short",
+      profile,
+      sourceText: sourceText.trim() || undefined,
+    }),
   });
 
   const payload = (await response.json()) as
@@ -41,7 +52,9 @@ async function fetchCarousel(genre: GenreId): Promise<Carousel> {
 }
 
 export function ContentEngineApp() {
+  const [profile, setProfile] = useState<AppProfile>(DEFAULT_APP_PROFILE);
   const [genre, setGenre] = useState<GenreId>(DEFAULT_CAROUSEL.genre);
+  const [sourceText, setSourceText] = useState("");
   const [carousel, setCarousel] = useState<Carousel>(DEFAULT_CAROUSEL);
   const [slideImages, setSlideImages] = useState<SlideImages>(emptySlideImages);
   const [busy, setBusy] = useState(false);
@@ -49,15 +62,23 @@ export function ContentEngineApp() {
   const [error, setError] = useState<string | null>(null);
   const [copiedAllPrompts, setCopiedAllPrompts] = useState(false);
 
+  useEffect(() => {
+    setProfile(loadAppProfile());
+  }, []);
+
   async function handleGenerate() {
     setBusy(true);
     setError(null);
 
     try {
-      const result = await fetchCarousel(genre);
+      const result = await fetchCarousel(genre, profile, sourceText);
       setCarousel(result);
       setSlideImages(emptySlideImages());
-      setStatusLabel("Carrousel prêt — copie les prompts puis importe tes images.");
+      setStatusLabel(
+        sourceText.trim()
+          ? "Carrousel adapté — vérifie les textes puis exporte."
+          : "Carrousel prêt — exporte directement ou ajoute tes propres fonds.",
+      );
     } catch (generateError) {
       setError(
         generateError instanceof Error
@@ -83,14 +104,6 @@ export function ContentEngineApp() {
     }));
   }
 
-  function handleApplyHook(hook: string) {
-    const slide1 =
-      carousel.slides.find((s) => s.slideNumber === 1) ?? carousel.slides[0];
-    if (slide1) {
-      handleSlideChange(slide1.id, { text: hook });
-    }
-  }
-
   async function copyAllPrompts() {
     const prompts = buildAllImagePrompts(
       carousel.slides.map((slide) => slide.visual),
@@ -103,32 +116,35 @@ export function ContentEngineApp() {
   return (
     <div className="mx-auto w-full max-w-[800px] px-4 py-5 sm:px-5 sm:py-8">
       <div className="mb-6 text-center sm:mb-8">
-        <h1 className="text-lg font-semibold text-[#1d1d1f] sm:text-xl">
-          Crée ton carrousel TikTok
-        </h1>
-        <p className="mt-1 text-sm text-[#86868b]">
-          4 étapes : générer → prompts → images → pack multi-comptes
+        <h1 className="k-heading text-lg sm:text-xl">Studio carrousel</h1>
+        <p className="k-text-muted mt-1 text-sm">
+          De l&apos;idée US au pack multi-comptes — 3 étapes
         </p>
       </div>
 
       <div className="flex flex-col gap-5 sm:gap-6">
+        <AppProfilePanel onChange={setProfile} />
+
         <ControlPanel
           genre={genre}
+          sourceText={sourceText}
           busy={busy}
           statusLabel={statusLabel}
           error={error}
           onGenreChange={setGenre}
+          onSourceTextChange={setSourceText}
           onGenerate={handleGenerate}
         />
 
         <section className="k-card">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="k-label mb-1">Étape 2</p>
-              <h2 className="k-subheading">Textes & prompts image</h2>
-              <p className="mt-1 text-xs text-[#86868b]">
-                Édite les textes, copie chaque prompt dans ton IA (Midjourney,
-                ChatGPT…), génère 5 images verticales 9:16.
+              <p className="k-label mb-1">Étape 2 · Affiner</p>
+              <h2 className="k-subheading">Textes & visuels</h2>
+              <p className="mt-1 text-xs k-text-muted">
+                Édite les slides et la légende. Les fonds sont générés
+                automatiquement — importe tes images seulement si tu veux un
+                style custom.
               </p>
             </div>
             <button
@@ -137,11 +153,11 @@ export function ContentEngineApp() {
               className="k-btn-secondary h-9 shrink-0 text-xs"
             >
               {copiedAllPrompts ? (
-                <Check className="h-3.5 w-3.5 text-[#007aff]" />
+                <Check className="h-3.5 w-3.5 k-accent" />
               ) : (
                 <Copy className="h-3.5 w-3.5" />
               )}
-              Copier les 5 prompts
+              Prompts image
             </button>
           </div>
 
@@ -163,16 +179,9 @@ export function ContentEngineApp() {
               }
             />
           </div>
-        </section>
 
-        <section className="k-card">
-          <p className="k-label mb-1">Étape 3</p>
-          <h2 className="k-subheading">Importer tes 5 images</h2>
-          <p className="mt-1 text-xs text-[#86868b]">
-            Une image par slide, dans l&apos;ordre. Elles serviront de fond pour
-            tous tes comptes (avec de légères variations automatiques).
-          </p>
-          <div className="mt-4">
+          <div className="mt-5 k-divider pt-5">
+            <p className="k-label mb-2">Fonds personnalisés (optionnel)</p>
             <SlideImagesPanel
               images={slideImages}
               onChange={setSlideImages}
@@ -185,7 +194,6 @@ export function ContentEngineApp() {
           carousel={carousel}
           slideImages={slideImages}
           disabled={busy}
-          onApplyHook={handleApplyHook}
         />
       </div>
     </div>

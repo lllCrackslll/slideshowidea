@@ -32,14 +32,14 @@ export function AccountNamesPanel({
 
   return (
     <div className="space-y-2">
-      <p className="text-[11px] text-[#86868b]">
+      <p className="text-[11px] k-text-muted">
         Nomme tes comptes TikTok — utilisé dans le planning et les dossiers
         exportés.
       </p>
       <ul className="grid max-h-64 gap-2 overflow-y-auto sm:grid-cols-2">
         {accounts.map((account) => (
           <li key={account.index}>
-            <label className="block text-[10px] text-[#aeaeb2]">
+            <label className="block text-[10px] k-text-faint">
               Compte {account.index + 1}
               <input
                 value={account.name}

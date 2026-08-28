@@ -53,7 +53,7 @@ export function ToolTutorial({
       </div>
 
       {!compact ? (
-        <p className="mt-2 text-[11px] leading-relaxed text-[#86868b]">
+        <p className="mt-2 text-[11px] leading-relaxed k-text-muted">
           {guide.statusHint}
         </p>
       ) : null}
@@ -62,9 +62,9 @@ export function ToolTutorial({
         {guide.steps.slice(0, compact ? 2 : undefined).map((step, i) => (
           <li
             key={step}
-            className="flex gap-2 text-[11px] leading-relaxed text-[#6e6e73]"
+            className="flex gap-2 text-[11px] leading-relaxed k-text-muted"
           >
-            <span className="shrink-0 text-[#aeaeb2]">{i + 1}.</span>
+            <span className="shrink-0 k-text-faint">{i + 1}.</span>
             <span>{step}</span>
           </li>
         ))}

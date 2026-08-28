@@ -1,5 +1,5 @@
-import { PlanningTool } from "@/components/tools/planning-tool";
+import { redirect } from "next/navigation";
 
 export default function PlanningPage() {
-  return <PlanningTool />;
+  redirect("/?step=schedule");
 }

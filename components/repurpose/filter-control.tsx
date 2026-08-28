@@ -28,11 +28,11 @@ export function FilterControl({
           onChange={(e) => onToggle(e.target.checked)}
           className="accent-[#007aff]"
         />
-        <span className="text-xs font-medium text-[#1d1d1f]">{title}</span>
+        <span className="text-xs font-medium k-text">{title}</span>
       </label>
       {enabled ? (
         <div className="mt-2 grid grid-cols-2 gap-2">
-          <label className="text-[10px] text-[#86868b]">
+          <label className="text-[10px] k-text-muted">
             Min
             <input
               type="number"
@@ -42,7 +42,7 @@ export function FilterControl({
               className="k-input mt-0.5 h-7 w-full px-1.5 text-xs"
             />
           </label>
-          <label className="text-[10px] text-[#86868b]">
+          <label className="text-[10px] k-text-muted">
             Max
             <input
               type="number"

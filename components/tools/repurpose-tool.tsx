@@ -171,7 +171,7 @@ export function RepurposeTool() {
       subtitle="Variantes uniques — filtres, presets, watermark, metadata US."
     >
       <div className="mb-4 flex flex-wrap items-end gap-2">
-        <label className="text-xs text-[#86868b]">
+        <label className="text-xs k-text-muted">
           Preset
           <select
             value={presetName}
@@ -185,13 +185,13 @@ export function RepurposeTool() {
             ))}
           </select>
         </label>
-        <label className="text-xs text-[#86868b]">
+        <label className="text-xs k-text-muted">
           Sauver preset as
           <input
             value={customPresetName}
             onChange={(e) => setCustomPresetName(e.target.value)}
             placeholder="Mon preset"
-            className="mt-1 block h-9 w-36 k-input px-2 text-sm text-[#1d1d1f]"
+            className="mt-1 block h-9 w-36 k-input px-2 text-sm"
           />
         </label>
         <button
@@ -204,7 +204,7 @@ export function RepurposeTool() {
         <button
           type="button"
           onClick={handleDeletePreset}
-          className="k-btn-secondary h-9 px-3 text-xs text-[#86868b]"
+          className="k-btn-secondary h-9 px-3 text-xs k-text-muted"
         >
           Supprimer preset
         </button>
@@ -223,7 +223,7 @@ export function RepurposeTool() {
             }}
           />
           {files.length > 0 ? (
-            <ul className="space-y-1 text-[10px] text-[#aeaeb2]">
+            <ul className="space-y-1 text-[10px] k-text-faint">
               {files.map((f) => (
                 <li key={f.name} className="truncate">
                   {f.name}
@@ -232,7 +232,7 @@ export function RepurposeTool() {
             </ul>
           ) : null}
 
-          <label className="block text-xs text-[#86868b]">
+          <label className="block text-xs k-text-muted">
             Copies par vidéo
             <input
               type="number"
@@ -240,7 +240,7 @@ export function RepurposeTool() {
               max={10}
               value={copies}
               onChange={(e) => setCopies(Number(e.target.value))}
-              className="mt-1 h-9 w-full k-input px-2 text-[#1d1d1f]"
+              className="mt-1 h-9 w-full k-input px-2"
             />
           </label>
 
@@ -259,15 +259,15 @@ export function RepurposeTool() {
           </button>
 
           {(busy || loading) && (
-            <p className="text-xs text-[#86868b]">
+            <p className="text-xs k-text-muted">
               {loading ? "Chargement FFmpeg…" : `Traitement… ${progress}%`}
             </p>
           )}
           {log ? (
-            <p className="truncate text-[10px] text-[#aeaeb2]">{log}</p>
+            <p className="truncate text-[10px] k-text-faint">{log}</p>
           ) : null}
           {message ? (
-            <p className="text-xs text-[#424245]">{message}</p>
+            <p className="text-xs k-text-secondary">{message}</p>
           ) : null}
         </div>
 
@@ -295,9 +295,9 @@ export function RepurposeTool() {
                 <button
                   type="button"
                   onClick={() => downloadBlob(item.blob, item.filename)}
-                  className="w-full rounded-lg border border-[rgba(0,122,255,0.12)] bg-white/90 px-3 py-2.5 text-left transition-colors hover:border-[rgba(0,122,255,0.28)] hover:bg-[rgba(0,122,255,0.04)]"
+                  className="k-list-item w-full text-left"
                 >
-                  <span className="text-sm font-medium text-[#007aff] hover:underline">
+                  <span className="text-sm font-medium k-link">
                     {item.filename}
                   </span>
                 </button>

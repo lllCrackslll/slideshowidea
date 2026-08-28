@@ -8,10 +8,10 @@ type ToolPageProps = {
 
 export function ToolPage({ title, subtitle, children }: ToolPageProps) {
   return (
-    <div className="mx-auto w-full max-w-[1200px] px-4 py-5 sm:px-5 sm:py-6">
+    <div className="k-page pb-10">
       <div className="mb-6">
         <h1 className="k-heading">{title}</h1>
-        {subtitle ? <p className="k-muted mt-1">{subtitle}</p> : null}
+        {subtitle ? <p className="mt-1 text-sm k-text-muted">{subtitle}</p> : null}
       </div>
       {children}
     </div>

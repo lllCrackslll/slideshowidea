@@ -105,7 +105,7 @@ export function RepurposeSettingsPanel({
       </div>
 
       {settings.dimensionsEnabled ? (
-        <label className="block text-xs text-[#86868b]">
+        <label className="block text-xs k-text-muted">
           Dimensions (WxH)
           <input
             value={settings.dimensionsInput}
@@ -113,7 +113,7 @@ export function RepurposeSettingsPanel({
               onChange({ ...settings, dimensionsInput: e.target.value })
             }
             placeholder="1080x1920"
-            className="mt-1 h-9 w-full max-w-xs k-input px-2 text-[#1d1d1f]"
+            className="mt-1 h-9 w-full max-w-xs k-input px-2 text-sm"
           />
         </label>
       ) : null}
@@ -126,16 +126,16 @@ export function RepurposeSettingsPanel({
         />
         {settings.watermarkEnabled ? (
           <div className="mt-3 space-y-2">
-            <label className="block text-xs text-[#86868b]">
+            <label className="block text-xs k-text-muted">
               Image watermark
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
                 onChange={(e) => onWatermarkFile(e.target.files?.[0] ?? null)}
-                className="mt-1 block w-full text-xs text-[#86868b]"
+                className="mt-1 block w-full text-xs k-text-muted"
               />
               {watermarkFile ? (
-                <span className="text-[#aeaeb2]">{watermarkFile.name}</span>
+                <span className="k-text-faint">{watermarkFile.name}</span>
               ) : null}
             </label>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -184,7 +184,7 @@ function ToggleRow({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <label className="flex items-center gap-2 rounded-xl border border-[rgba(0,122,255,0.12)] bg-white/80 px-3 py-2 text-xs text-[#424245]">
+    <label className="k-toggle-row">
       <input
         type="checkbox"
         checked={checked}
@@ -208,7 +208,7 @@ function NumField({
   onChange: (v: number) => void;
 }) {
   return (
-    <label className="text-[10px] text-[#86868b]">
+    <label className="text-[10px] k-text-muted">
       {label}
       <input
         type="number"

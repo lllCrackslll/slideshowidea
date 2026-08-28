@@ -45,7 +45,7 @@ export function BrollUploadPanel() {
 
   return (
     <div className="space-y-4">
-      <p className="text-[11px] text-[#86868b]">
+      <p className="text-[11px] k-text-muted">
         Ajoute tes propres fonds (JPG/PNG). Mélangés avec les b-roll par défaut
         à l&apos;export.
       </p>
@@ -53,7 +53,7 @@ export function BrollUploadPanel() {
       {CATEGORIES.map((category) => (
         <div key={category}>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs font-medium text-[#1d1d1f]">
+            <span className="text-xs font-medium k-text">
               {BROLL_CATEGORY_LABELS[category]}
             </span>
             <label className="k-btn-secondary h-8 cursor-pointer px-2.5 text-[11px]">
@@ -84,15 +84,15 @@ export function BrollUploadPanel() {
                   <button
                     type="button"
                     onClick={() => setPools(removeCustomBrollAt(category, index))}
-                    className="absolute -right-1 -top-1 rounded-full bg-white p-0.5 shadow ring-1 ring-[rgba(0,122,255,0.2)]"
+                    className="absolute -right-1 -top-1 k-theme-toggle h-5 w-5 p-0"
                   >
-                    <X className="h-3 w-3 text-[#86868b]" />
+                    <X className="h-3 w-3" />
                   </button>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-[10px] text-[#aeaeb2]">Aucun fond perso.</p>
+            <p className="text-[10px] k-text-faint">Aucun fond perso.</p>
           )}
         </div>
       ))}

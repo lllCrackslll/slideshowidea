@@ -42,7 +42,7 @@ export function ReducerTool() {
       title="File Reducer"
       subtitle="Compresse tes images en JPEG léger."
     >
-      <label className="mb-4 block text-xs text-[#86868b]">
+      <label className="mb-4 block text-xs k-text-muted">
         Qualité JPEG ({quality}%)
         <input
           type="range"
@@ -63,8 +63,8 @@ export function ReducerTool() {
         }}
       />
 
-      {busy ? <p className="mt-3 text-xs text-[#86868b]">Traitement…</p> : null}
-      {message ? <p className="mt-3 text-xs text-[#424245]">{message}</p> : null}
+      {busy ? <p className="mt-3 text-xs k-text-muted">Traitement…</p> : null}
+      {message ? <p className="mt-3 text-xs k-text-secondary">{message}</p> : null}
 
       {getToolGuide("/reducer") ? (
         <ToolTutorial guide={getToolGuide("/reducer")!} className="mt-6" />

@@ -1,4 +1,5 @@
 import type { FormatId, GenreId } from "./types";
+import type { AppProfile } from "./app-profile";
 
 export type GeneratedSlide = {
   slide_number: number;
@@ -17,6 +18,9 @@ export type GenerateResponse = {
 export type GenerateRequest = {
   genre: GenreId;
   format: FormatId;
+  profile?: AppProfile;
+  /** Texte US à adapter (optionnel). */
+  sourceText?: string;
 };
 
 export const CAROUSEL_JSON_SCHEMA = {

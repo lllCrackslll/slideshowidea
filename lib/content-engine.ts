@@ -21,39 +21,38 @@ export function formatLabel(id: FormatId): string {
 export const DEFAULT_CAROUSEL: Carousel = {
   id: "default",
   genre: "conseil",
-  topic: "Courbe de l'oubli",
+  topic: "Exemple — Courbe de l'oubli",
   slides: [
     {
       id: "d1",
       text: "Je révisais 4 heures.\nTrois jours plus tard, j'avais tout oublié.",
       visual:
-        "Chambre d'étudiant la nuit, notes éparpillées, écran qui éclaire le visage.",
+        "Chambre la nuit, notes éparpillées, écran qui éclaire le visage.",
     },
     {
       id: "d2",
-      text: "J'ai compris : relire ne servait à rien.\nJe me croyais prêt, j'étais juste familier avec le cours.",
+      text: "Relire ne servait à rien.\nJ'étais familier avec le cours, pas prêt.",
       visual:
-        "Graphique Ebbinghaus minimaliste, ligne blanche qui chute sur fond noir.",
+        "Graphique minimaliste, ligne blanche qui chute sur fond noir.",
     },
     {
       id: "d3",
-      text: "Mon fix : 4 rappels espacés.\nJ+1 · J+3 · J+7 · J+30 — sans tricher avec mes notes.",
-      visual:
-        "Timeline horizontale avec 4 points lumineux, esthétique Linear.",
+      text: "Mon fix : 4 rappels espacés.\nJ+1 · J+3 · J+7 · J+30.",
+      visual: "Timeline horizontale avec 4 points lumineux, esthétique sombre.",
     },
     {
       id: "d4",
-      text: "Perso je scanne mes cours sur Kognia pour sortir mes fiches et quiz en 10 s.",
-      visual: "iPad, Apple Pencil, page blanche, café, lumière tamisée.",
+      text: "J'utilise Mon app pour mes fiches et quiz en 10 s.",
+      visual: "Smartphone, bureau minimaliste, lumière tamisée.",
     },
     {
       id: "d5",
-      text: "Ton cerveau n'est pas cassé.\nTon système l'est — et tu peux le changer. Lien en bio.",
-      visual: "Bureau minimaliste sombre avec café et iPad.",
+      text: "Ton système peut changer.\n@monapp en bio.",
+      visual: "Bureau sombre avec café et téléphone.",
     },
   ],
   caption:
-    "J'ai passé des semaines à relire mes cours sans rien retenir.\n\nLa courbe de l'oubli m'a ouvert les yeux : sans rappels, tout s'évapore en 24h.\n\nMon protocole :\n→ J+1 rappel sans notes\n→ J+3 même chose\n→ J+7 mix + cartes\n→ J+30 dernier passage\n\nPerso j'utilise Kognia pour accélérer les fiches et les quiz.\n\nSauvegarde si tu veux arrêter de réviser dans le vide.",
+    "J'ai passé des semaines à relire sans rien retenir.\n\nLa courbe de l'oubli : sans rappels, tout s'évapore en 24h.\n\nMon protocole J+1, J+3, J+7, J+30.\n\nSauvegarde si tu veux arrêter de réviser dans le vide.",
   hashtags: [
     "#etudiant",
     "#study",
@@ -80,7 +79,6 @@ export function formatCarouselText(carousel: Carousel): string {
     .join("\n\n---\n\n");
 
   return [
-    `KOGNIA — ${genreLabel(carousel.genre)}`,
     carousel.topic ? `Sujet : ${carousel.topic}` : null,
     "",
     slides,

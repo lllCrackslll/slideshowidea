@@ -98,18 +98,26 @@ export function PlanningTool() {
   return (
     <ToolPage
       title="Planning"
-      subtitle="Organise tes comptes TikTok et coche chaque publication."
+      subtitle="Configure tes comptes, publie aux bons horaires, coche au fur et à mesure."
     >
       <div className="mx-auto flex max-w-[720px] flex-col gap-5">
+        <div className="k-callout">
+          <p className="text-xs leading-relaxed k-text-secondary">
+            <strong className="font-medium k-text">Anti-shadowban :</strong>{" "}
+            espace 20–45 min entre chaque compte, max 3 posts/jour/compte les 2
+            premières semaines, jamais le même contenu 100 % identique sur tous
+            les comptes (l&apos;export Studio gère les variations visuelles).
+          </p>
+        </div>
+
         <section className="k-card">
           <h2 className="k-subheading">Configuration</h2>
-          <p className="mt-1 text-xs text-[#86868b]">
-            Ces réglages sont aussi utilisés pour l&apos;export du Content
-            Engine.
+          <p className="mt-1 text-xs k-text-muted">
+            Utilisé pour l&apos;export multi-comptes du Studio.
           </p>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <label className="block text-xs text-[#86868b]">
+            <label className="block text-xs k-text-muted">
               Nombre de comptes
               <div className="mt-2 flex items-center gap-3">
                 <input
@@ -122,13 +130,13 @@ export function PlanningTool() {
                   }
                   className="w-full accent-[#007aff]"
                 />
-                <span className="w-8 text-sm font-semibold text-[#1d1d1f]">
+                <span className="k-text w-8 text-sm font-semibold">
                   {settings.accountCount}
                 </span>
               </div>
             </label>
 
-            <label className="block text-xs text-[#86868b]">
+            <label className="block text-xs k-text-muted">
               Posts par jour / compte
               <div className="mt-2 flex items-center gap-3">
                 <input
@@ -141,7 +149,7 @@ export function PlanningTool() {
                   }
                   className="w-full accent-[#007aff]"
                 />
-                <span className="w-8 text-sm font-semibold text-[#1d1d1f]">
+                <span className="k-text w-8 text-sm font-semibold">
                   {settings.postsPerDay}
                 </span>
               </div>
@@ -149,7 +157,7 @@ export function PlanningTool() {
           </div>
 
           <div className="mt-4 grid grid-cols-3 gap-2">
-            <label className="text-[10px] text-[#aeaeb2]">
+            <label className="text-[10px] k-text-faint">
               Début (h)
               <input
                 type="number"
@@ -162,7 +170,7 @@ export function PlanningTool() {
                 className="k-input mt-1 h-9 w-full text-sm"
               />
             </label>
-            <label className="text-[10px] text-[#aeaeb2]">
+            <label className="text-[10px] k-text-faint">
               Min
               <input
                 type="number"
@@ -176,7 +184,7 @@ export function PlanningTool() {
                 className="k-input mt-1 h-9 w-full text-sm"
               />
             </label>
-            <label className="text-[10px] text-[#aeaeb2]">
+            <label className="text-[10px] k-text-faint">
               Écart (min)
               <input
                 type="number"
@@ -198,7 +206,7 @@ export function PlanningTool() {
           <ul className="mt-3 grid max-h-56 gap-2 overflow-y-auto sm:grid-cols-2">
             {accounts.map((account) => (
               <li key={account.index}>
-                <label className="block text-[10px] text-[#aeaeb2]">
+                <label className="block text-[10px] k-text-faint">
                   Compte {account.index + 1}
                   <input
                     value={account.name}
@@ -218,7 +226,7 @@ export function PlanningTool() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="k-subheading capitalize">{formatTodayLabel()}</h2>
-              <p className="mt-1 text-xs text-[#86868b]">
+              <p className="mt-1 text-xs k-text-muted">
                 {settings.accountCount} comptes × {settings.postsPerDay} posts ={" "}
                 {schedule.length} publications
               </p>
@@ -228,17 +236,17 @@ export function PlanningTool() {
             </span>
           </div>
 
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-[rgba(0,122,255,0.08)]">
+          <div className="mt-3 h-2 overflow-hidden rounded-full" style={{ background: "var(--surface-inset)" }}>
             <div
-              className="h-full rounded-full bg-[#007aff] transition-all"
-              style={{ width: `${progress.percent}%` }}
+              className="h-full rounded-full transition-all"
+              style={{ width: `${progress.percent}%`, background: "var(--accent)" }}
             />
           </div>
 
           <ul className="mt-4 space-y-4">
             {grouped.map(([accountIndex, posts]) => (
               <li key={accountIndex}>
-                <p className="mb-2 text-xs font-semibold text-[#1d1d1f]">
+                <p className="k-text mb-2 text-xs font-semibold">
                   {posts[0]?.accountLabel ?? defaultAccountName(accountIndex)}
                 </p>
                 <ul className="space-y-1.5">
@@ -254,23 +262,23 @@ export function PlanningTool() {
                           }
                           className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all ${
                             done
-                              ? "border-[rgba(0,122,255,0.25)] bg-[rgba(0,122,255,0.06)]"
-                              : "border-[rgba(0,122,255,0.1)] bg-white/90"
+                              ? "k-list-item-active"
+                              : "k-list-item"
                           }`}
                         >
                           <span
                             className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
                               done
-                                ? "border-[#007aff] bg-[#007aff] text-white"
-                                : "border-[rgba(0,122,255,0.2)]"
+                                ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+                                : "border-[var(--border-strong)]"
                             }`}
                           >
                             {done ? <Check className="h-3 w-3" /> : null}
                           </span>
-                          <span className="flex-1 text-sm text-[#1d1d1f]">
+                          <span className="k-text flex-1 text-sm">
                             Post {item.postNumber}
                           </span>
-                          <span className="shrink-0 text-xs tabular-nums text-[#007aff]">
+                          <span className="shrink-0 text-xs tabular-nums k-accent">
                             {item.time}
                           </span>
                         </button>

@@ -42,9 +42,9 @@ export function FileDropzone({
       }}
       className={`k-dropzone ${dragging ? "k-dropzone-active" : ""}`}
     >
-      <Upload className="mb-3 h-8 w-8 text-[#007aff]" />
-      <p className="text-sm font-medium text-[#1d1d1f]">{label}</p>
-      <p className="mt-1 text-xs text-[#86868b]">{hint}</p>
+      <Upload className="mb-3 h-8 w-8 k-accent" />
+      <p className="k-text text-sm font-medium">{label}</p>
+      <p className="k-text-muted mt-1 text-xs">{hint}</p>
       <input
         type="file"
         accept={accept}
