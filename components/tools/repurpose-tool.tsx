@@ -221,25 +221,34 @@ export function RepurposeTool() {
 
       <div className="grid gap-6 xl:grid-cols-[340px_1fr]">
         <div className="space-y-4">
-          <FileDropzone
-            accept="video/mp4,video/quicktime,video/x-matroska"
-            multiple
-            label="Vidéos (multi)"
-            hint="MP4, MOV, MKV"
-            onFiles={(picked) => {
-              setFiles(picked);
-              clearResults();
-            }}
-          />
-          {files.length > 0 ? (
-            <ul className="space-y-1 text-[10px] k-text-faint">
-              {files.map((f) => (
-                <li key={f.name} className="truncate">
-                  {f.name}
-                </li>
-              ))}
-            </ul>
-          ) : null}
+          <section className="k-card-glow">
+            <p className="k-label">Vidéos source</p>
+            <p className="mt-1 text-xs k-text-muted">
+              Glisse tes fichiers ou clique dans la zone ci-dessous
+            </p>
+            <div className="mt-4">
+              <FileDropzone
+                accept="video/mp4,video/quicktime,video/x-matroska"
+                multiple
+                label="Ajouter des vidéos"
+                hint="MP4, MOV, MKV · plusieurs fichiers"
+                className="min-h-[200px]"
+                onFiles={(picked) => {
+                  setFiles(picked);
+                  clearResults();
+                }}
+              />
+            </div>
+            {files.length > 0 ? (
+              <ul className="mt-4 space-y-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3">
+                {files.map((f) => (
+                  <li key={f.name} className="truncate text-xs k-text-secondary">
+                    {f.name}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </section>
 
           <label className="block text-xs k-text-muted">
             Copies par vidéo

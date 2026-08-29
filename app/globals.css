@@ -303,6 +303,23 @@ body {
     background: var(--surface-2);
   }
 
+  .k-dropzone {
+    @apply flex min-h-[168px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-8 text-center transition-all;
+    border-color: var(--border-strong);
+    background: var(--surface-2);
+  }
+
+  .k-dropzone:hover {
+    border-color: var(--accent);
+    background: var(--surface-accent);
+  }
+
+  .k-dropzone-active {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    box-shadow: var(--shadow-glow);
+  }
+
   .k-callout {
     @apply rounded-xl px-4 py-3;
     border: 1px solid var(--border);

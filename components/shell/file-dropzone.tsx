@@ -8,6 +8,7 @@ type FileDropzoneProps = {
   multiple?: boolean;
   label?: string;
   hint?: string;
+  className?: string;
   onFiles: (files: File[]) => void;
 };
 
@@ -16,6 +17,7 @@ export function FileDropzone({
   multiple = false,
   label = "Glisse tes fichiers ici",
   hint = "ou clique pour parcourir",
+  className = "",
   onFiles,
 }: FileDropzoneProps) {
   const [dragging, setDragging] = useState(false);
@@ -40,7 +42,7 @@ export function FileDropzone({
         setDragging(false);
         handleFiles(e.dataTransfer.files);
       }}
-      className={`k-dropzone ${dragging ? "k-dropzone-active" : ""}`}
+      className={`k-dropzone ${dragging ? "k-dropzone-active" : ""} ${className}`}
     >
       <Upload className="mb-3 h-8 w-8 k-accent" />
       <p className="k-text text-sm font-medium">{label}</p>
