@@ -22,7 +22,12 @@ import {
   saveSchedule,
 } from "@/lib/workspace/storage";
 import type { Campaign, PublishFormat, ScheduledPost } from "@/lib/workspace/types";
+import { canPublishWithSettings, type TikTokPostSettings } from "@/lib/tiktok/post-settings";
 import { CampaignPicker } from "../campaign-picker";
+import {
+  EMPTY_TIKTOK_POST_SETTINGS,
+  TikTokPublishOptions,
+} from "../tiktok-publish-options";
 import { useWorkspace } from "../workspace-context";
 
 function folderSlug(label: string) {
@@ -103,12 +108,14 @@ async function publishVideoToAccount(params: {
   accountId: string;
   videoUrl: string;
   caption: string;
+  settings: TikTokPostSettings;
 }) {
   const blob = await urlToBlob(params.videoUrl);
   const form = new FormData();
   form.set("workspaceId", params.workspaceId);
   form.set("accountId", params.accountId);
   form.set("caption", params.caption);
+  form.set("settings", JSON.stringify(params.settings));
   form.set("video", blob, blob.type.includes("webm") ? "video.webm" : "video.mp4");
 
   const res = await fetch("/api/tiktok/publish", {
@@ -129,12 +136,14 @@ async function publishPhotosToAccount(params: {
   accountId: string;
   imageUrls: string[];
   caption: string;
+  settings: TikTokPostSettings;
 }) {
   const blobs = await Promise.all(params.imageUrls.map((url) => urlToBlob(url)));
   const form = new FormData();
   form.set("workspaceId", params.workspaceId);
   form.set("accountId", params.accountId);
   form.set("caption", params.caption);
+  form.set("settings", JSON.stringify(params.settings));
   blobs.forEach((blob, i) => {
     form.append("images", blob, `slide-${i + 1}.jpg`);
   });
@@ -160,6 +169,8 @@ export function ScheduleStep() {
   const [caption, setCaption] = useState("");
   const [hashtagText, setHashtagText] = useState("");
   const [musicConsent, setMusicConsent] = useState(false);
+  const [tiktokSettings, setTikTokSettings] = useState<TikTokPostSettings>(EMPTY_TIKTOK_POST_SETTINGS);
+  const [tiktokBlocked, setTikTokBlocked] = useState<string | null>(null);
   const [lastBatch, setLastBatch] = useState<ScheduledPost[]>([]);
   const [scheduleTick, setScheduleTick] = useState(0);
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -171,6 +182,8 @@ export function ScheduleStep() {
     setCaption(campaign.caption ?? "");
     setHashtagText(campaign.hashtags?.join(" ") ?? "");
     setLastBatch([]);
+    setTikTokSettings(EMPTY_TIKTOK_POST_SETTINGS);
+    setMusicConsent(false);
   }, [campaignId]);
 
   const campaignPosts = useMemo(() => {
@@ -303,8 +316,12 @@ export function ScheduleStep() {
       setMsg("Ajoute une description avant de publier.");
       return;
     }
-    if (!musicConsent) {
-      setMsg("Coche la confirmation musique TikTok avant de publier.");
+    if (!canPublishWithSettings(tiktokSettings, musicConsent)) {
+      setMsg("Complète les paramètres TikTok avant de publier.");
+      return;
+    }
+    if (tiktokBlocked) {
+      setMsg(tiktokBlocked);
       return;
     }
 
@@ -348,6 +365,7 @@ export function ScheduleStep() {
             accountId: acc.id,
             videoUrl: files[0],
             caption: postCaption,
+            settings: tiktokSettings,
           });
 
           results.push({
@@ -373,6 +391,7 @@ export function ScheduleStep() {
             accountId: acc.id,
             imageUrls: files,
             caption: postCaption,
+            settings: tiktokSettings,
           });
 
           results.push({
@@ -417,6 +436,17 @@ export function ScheduleStep() {
   const filledAccounts = accounts.filter((a) =>
     getAccountFiles(c, a.id, publishAsVideo ? "video" : "carousel").length > 0,
   ).length;
+
+  const publishFormat = publishAsVideo ? "video" : "carousel";
+  const primaryAccount = accounts.find(
+    (acc) => acc.status === "connected" && getAccountFiles(c, acc.id, publishFormat).length > 0,
+  );
+  const primaryVideoUrl =
+    publishAsVideo && primaryAccount
+      ? getAccountFiles(c, primaryAccount.id, "video")[0]
+      : undefined;
+  const canPublish =
+    canPublishWithSettings(tiktokSettings, musicConsent) && !tiktokBlocked;
 
   const displayPosts = lastBatch.length > 0 ? lastBatch : historyPosts.slice(0, 6);
 
@@ -525,15 +555,6 @@ export function ScheduleStep() {
             placeholder="#app #fyp #marketing"
             className="k-input h-10 w-full px-3 text-sm"
           />
-        </label>
-        <label className="flex cursor-pointer items-start gap-2 text-xs k-text-muted">
-          <input
-            type="checkbox"
-            checked={musicConsent}
-            onChange={(e) => setMusicConsent(e.target.checked)}
-            className="mt-0.5 h-4 w-4 accent-[var(--accent)]"
-          />
-          <span>By posting, you agree to TikTok&apos;s Music Usage Confirmation.</span>
         </label>
       </div>
 
@@ -650,6 +671,18 @@ export function ScheduleStep() {
         {filledAccounts}/{accounts.length} comptes prêts
       </p>
 
+      <TikTokPublishOptions
+        workspaceId={ws.id}
+        accountId={primaryAccount?.id ?? null}
+        isVideo={publishAsVideo}
+        videoUrl={primaryVideoUrl}
+        settings={tiktokSettings}
+        onSettingsChange={setTikTokSettings}
+        musicConsent={musicConsent}
+        onMusicConsentChange={setMusicConsent}
+        onBlockedChange={setTikTokBlocked}
+      />
+
       <div className="mt-5 flex flex-col gap-2 sm:flex-row">
         <button
           type="button"
@@ -666,7 +699,7 @@ export function ScheduleStep() {
         </button>
         <button
           type="button"
-          disabled={filledAccounts === 0 || publishing || !caption.trim() || !musicConsent}
+          disabled={filledAccounts === 0 || publishing || !caption.trim() || !canPublish}
           onClick={() => void publish()}
           className="k-btn-accent flex-1"
         >

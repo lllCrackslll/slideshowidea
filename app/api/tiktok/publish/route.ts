@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isTikTokConfigured } from "@/lib/tiktok/config";
+import { parsePostSettings } from "@/lib/tiktok/post-settings";
 import { publishVideoToTikTok } from "@/lib/tiktok/publish";
 
 export async function POST(request: Request) {
@@ -14,11 +15,19 @@ export async function POST(request: Request) {
   const workspaceId = String(form.get("workspaceId") ?? "").trim();
   const accountId = String(form.get("accountId") ?? "").trim();
   const caption = String(form.get("caption") ?? "").trim();
+  const settings = parsePostSettings(String(form.get("settings") ?? ""));
   const video = form.get("video");
 
   if (!workspaceId || !accountId) {
     return NextResponse.json(
       { ok: false, error: "workspaceId et accountId requis." },
+      { status: 400 },
+    );
+  }
+
+  if (!settings) {
+    return NextResponse.json(
+      { ok: false, error: "Paramètres TikTok requis." },
       { status: 400 },
     );
   }
@@ -39,6 +48,7 @@ export async function POST(request: Request) {
     video: buffer,
     contentType,
     caption,
+    settings,
   });
 
   if (!result.ok) {

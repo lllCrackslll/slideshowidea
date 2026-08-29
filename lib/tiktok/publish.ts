@@ -1,11 +1,7 @@
 import { getTikTokConfig } from "./config";
-import { refreshAccessToken } from "./oauth";
+import { toApiPostInfo, type TikTokPostSettings } from "./post-settings";
 import { buildStagingUrls, createStagingToken } from "./staging";
-import {
-  getTikTokConnection,
-  saveTikTokConnection,
-} from "./token-store";
-import type { TikTokStoredConnection } from "./types";
+import { getConnectionToken } from "./session";
 
 type TikTokApiError = {
   code?: string;
@@ -29,35 +25,6 @@ type PhotoInitResponse = {
   error?: TikTokApiError;
 };
 
-async function ensureAccessToken(
-  connection: TikTokStoredConnection,
-): Promise<{ token: string; connection: TikTokStoredConnection }> {
-  const now = Date.now();
-  if (connection.expiresAt > now + 60_000) {
-    return { token: connection.accessToken, connection };
-  }
-
-  if (connection.refreshExpiresAt <= now) {
-    throw new Error("Session TikTok expirée — reconnecte le compte.");
-  }
-
-  const refreshed = await refreshAccessToken(connection.refreshToken);
-  if (refreshed.error || !refreshed.access_token) {
-    throw new Error(refreshed.error_description ?? "Impossible de rafraîchir le token TikTok.");
-  }
-
-  const updated: TikTokStoredConnection = {
-    ...connection,
-    accessToken: refreshed.access_token,
-    refreshToken: refreshed.refresh_token ?? connection.refreshToken,
-    expiresAt: now + refreshed.expires_in * 1000,
-    refreshExpiresAt: now + refreshed.refresh_expires_in * 1000,
-    scope: refreshed.scope ?? connection.scope,
-  };
-  await saveTikTokConnection(updated);
-  return { token: updated.accessToken, connection: updated };
-}
-
 function chunkPlan(videoSize: number) {
   const maxChunk = 10 * 1024 * 1024;
   if (videoSize <= maxChunk) {
@@ -75,6 +42,7 @@ async function initVideoUpload(
   videoSize: number,
   caption: string,
   scopes: string,
+  settings: TikTokPostSettings,
 ): Promise<{ publishId: string; uploadUrl: string; mode: "direct" | "inbox" }> {
   const { chunkSize, totalChunkCount } = chunkPlan(videoSize);
   const canDirectPost = scopes.includes("video.publish");
@@ -93,13 +61,7 @@ async function initVideoUpload(
   };
 
   if (canDirectPost) {
-    body.post_info = {
-      title: caption.slice(0, 2200),
-      privacy_level: "SELF_ONLY",
-      disable_duet: false,
-      disable_comment: false,
-      disable_stitch: false,
-    };
+    body.post_info = toApiPostInfo(settings, caption);
   }
 
   const res = await fetch(initUrl, {
@@ -166,23 +128,27 @@ export async function publishVideoToTikTok(params: {
   video: Buffer;
   contentType: string;
   caption: string;
+  settings: TikTokPostSettings;
 }): Promise<TikTokPublishResult> {
   if (!getTikTokConfig()) {
     return { ok: false, mode: "inbox", error: "TikTok non configuré sur le serveur." };
   }
 
-  const connection = await getTikTokConnection(params.workspaceId, params.accountId);
-  if (!connection) {
-    return { ok: false, mode: "inbox", error: "Compte TikTok non connecté." };
+  if (!params.settings.privacyLevel) {
+    return { ok: false, mode: "inbox", error: "Confidentialité requise." };
   }
 
   try {
-    const { token, connection: fresh } = await ensureAccessToken(connection);
+    const { token, connection: fresh } = await getConnectionToken(
+      params.workspaceId,
+      params.accountId,
+    );
     const { publishId, uploadUrl, mode } = await initVideoUpload(
       token,
       params.video.byteLength,
       params.caption,
       fresh.scope,
+      params.settings,
     );
     await uploadVideoChunks(uploadUrl, params.video, params.contentType);
     return { ok: true, publishId, mode };
@@ -200,19 +166,19 @@ async function initPhotoPost(
   caption: string,
   photoUrls: string[],
   scopes: string,
+  settings: TikTokPostSettings,
 ): Promise<{ publishId: string; mode: "direct" | "inbox" }> {
   const canDirectPost = scopes.includes("video.publish");
   const postMode = canDirectPost ? "DIRECT_POST" : "MEDIA_UPLOAD";
+  const postInfo = toApiPostInfo(settings, caption);
   const title = caption.split("\n")[0]?.slice(0, 90) || "Carrousel";
-  const description = caption.slice(0, 4000);
 
   const body: Record<string, unknown> = {
     media_type: "PHOTO",
     post_mode: postMode,
     post_info: {
+      ...postInfo,
       title,
-      description,
-      disable_comment: false,
       auto_add_music: true,
     },
     source_info: {
@@ -222,8 +188,8 @@ async function initPhotoPost(
     },
   };
 
-  if (canDirectPost) {
-    (body.post_info as Record<string, unknown>).privacy_level = "SELF_ONLY";
+  if (!canDirectPost) {
+    delete (body.post_info as Record<string, unknown>).privacy_level;
   }
 
   const res = await fetch("https://open.tiktokapis.com/v2/post/publish/content/init/", {
@@ -253,6 +219,7 @@ export async function publishPhotosToTikTok(params: {
   images: Buffer[];
   contentTypes: string[];
   caption: string;
+  settings: TikTokPostSettings;
 }): Promise<TikTokPublishResult> {
   if (!getTikTokConfig()) {
     return { ok: false, mode: "inbox", error: "TikTok non configuré sur le serveur." };
@@ -262,13 +229,15 @@ export async function publishPhotosToTikTok(params: {
     return { ok: false, mode: "inbox", error: "Aucune image." };
   }
 
-  const connection = await getTikTokConnection(params.workspaceId, params.accountId);
-  if (!connection) {
-    return { ok: false, mode: "inbox", error: "Compte TikTok non connecté." };
+  if (!params.settings.privacyLevel) {
+    return { ok: false, mode: "inbox", error: "Confidentialité requise." };
   }
 
   try {
-    const { token, connection: fresh } = await ensureAccessToken(connection);
+    const { token, connection: fresh } = await getConnectionToken(
+      params.workspaceId,
+      params.accountId,
+    );
     const stagingToken = createStagingToken(params.images, params.contentTypes);
     const photoUrls = buildStagingUrls(stagingToken, params.images.length);
     const { publishId, mode } = await initPhotoPost(
@@ -276,6 +245,7 @@ export async function publishPhotosToTikTok(params: {
       params.caption,
       photoUrls,
       fresh.scope,
+      params.settings,
     );
     return { ok: true, publishId, mode };
   } catch (err) {
