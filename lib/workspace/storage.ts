@@ -64,17 +64,8 @@ function writeJson(key: string, value: unknown): void {
   }
 }
 
-function defaultAccounts(): TikTokAccount[] {
-  return Array.from({ length: 3 }, (_, i) => ({
-    id: `acc-${i}`,
-    label: `@compte-${String(i + 1).padStart(2, "0")}`,
-    persona: i === 0 ? "Grand frère bienveillant" : i === 1 ? "Pote direct" : "Coach pragmatique",
-    storeUrl: "",
-    promoCode: "",
-    publishHour: 8 + i * 2,
-    publishMinute: 15 * i,
-    status: "disconnected" as const,
-  }));
+export function loadAccounts(workspaceId: string): TikTokAccount[] {
+  return readJson<TikTokAccount[]>(wsAccountsKey(workspaceId), []);
 }
 
 function emptySlides(): CampaignSlide[] {
@@ -104,7 +95,7 @@ export function createCleanSlots(): CampaignSlide[] {
 export function createDefaultCampaign(workspaceId: string, name = "Campagne 1"): Campaign {
   const now = new Date().toISOString();
   return {
-    id: uid("camp"),
+    id: workspaceId,
     workspaceId,
     name,
     createdAt: now,
@@ -114,20 +105,60 @@ export function createDefaultCampaign(workspaceId: string, name = "Campagne 1"):
     hashtags: [],
     status: "draft",
     accountMedia: {},
+    accountVideos: {},
+    publishFormat: "carousel",
   };
 }
 
+/** 1 app = 1 campagne (même id). */
+export function ensureWorkspaceCampaign(workspace: Workspace): Campaign {
+  const list = loadCampaigns(workspace.id);
+  const primary = list.find((c) => c.id === workspace.id) ?? list[0];
+
+  if (!primary) {
+    const created = createDefaultCampaign(workspace.id, workspace.name);
+    saveCampaigns(workspace.id, [created]);
+    return created;
+  }
+
+  const synced: Campaign = {
+    ...primary,
+    id: workspace.id,
+    workspaceId: workspace.id,
+    name: workspace.name,
+  };
+  saveCampaigns(workspace.id, [synced]);
+  return synced;
+}
+
+export function ensureAllWorkspaceCampaigns(workspaces: Workspace[]): void {
+  for (const ws of workspaces) {
+    ensureWorkspaceCampaign(ws);
+  }
+}
+
 export function loadWorkspaces(): Workspace[] {
-  const list = readJson<Workspace[]>(WORKSPACES_KEY, []);
-  if (list.length) return list;
-  const ws = createDefaultWorkspace();
-  writeJson(WORKSPACES_KEY, [ws]);
-  writeJson(wsAccountsKey(ws.id), defaultAccounts());
-  const camp = createDefaultCampaign(ws.id);
-  writeJson(wsCampaignsKey(ws.id), [camp]);
-  writeJson(ACTIVE_WS_KEY, ws.id);
-  writeJson(ACTIVE_CAMPAIGN_KEY, camp.id);
-  return [ws];
+  if (typeof window === "undefined") return [];
+
+  const raw = localStorage.getItem(WORKSPACES_KEY);
+  if (raw === null) {
+    const ws = createDefaultWorkspace();
+    writeJson(WORKSPACES_KEY, [ws]);
+    writeJson(wsAccountsKey(ws.id), []);
+    const camp = createDefaultCampaign(ws.id, ws.name);
+    writeJson(wsCampaignsKey(ws.id), [camp]);
+    writeJson(ACTIVE_WS_KEY, ws.id);
+    writeJson(ACTIVE_CAMPAIGN_KEY, camp.id);
+    return [ws];
+  }
+
+  try {
+    const list = JSON.parse(raw) as Workspace[];
+    if (list.length) ensureAllWorkspaceCampaigns(list);
+    return list;
+  } catch {
+    return [];
+  }
 }
 
 export function saveWorkspaces(workspaces: Workspace[]): void {
@@ -172,10 +203,17 @@ function compactCampaignForJson(campaign: Campaign): Campaign {
       accountMedia[id] = urls.map(stripUrl);
     }
   }
+  const accountVideos: Record<string, string[]> = {};
+  if (campaign.accountVideos) {
+    for (const [id, urls] of Object.entries(campaign.accountVideos)) {
+      accountVideos[id] = urls.map(stripUrl);
+    }
+  }
   return {
     ...campaign,
     importedImages: campaign.importedImages?.map(stripUrl),
     accountMedia,
+    accountVideos,
     slides: campaign.slides.map((slide) => ({
       ...slide,
       imageUrl: stripUrl(slide.imageUrl),
@@ -220,8 +258,13 @@ export function deleteWorkspace(workspaceId: string): void {
   localStorage.removeItem(wsScheduleKey(workspaceId));
   localStorage.removeItem(wsMetricsKey(workspaceId));
   const active = getActiveWorkspaceId();
-  if (active === workspaceId && list[0]) {
-    setActiveWorkspaceId(list[0].id);
+  if (active === workspaceId) {
+    if (list[0]) {
+      setActiveWorkspaceId(list[0].id);
+    } else {
+      localStorage.removeItem(ACTIVE_WS_KEY);
+      localStorage.removeItem(ACTIVE_CAMPAIGN_KEY);
+    }
   }
 }
 
@@ -238,11 +281,6 @@ export async function upsertCampaign(
   else list.unshift(meta);
   saveCampaigns(workspaceId, list);
   return { ...campaign, updatedAt: meta.updatedAt };
-}
-
-export function loadAccounts(workspaceId: string): TikTokAccount[] {
-  const accounts = readJson<TikTokAccount[]>(wsAccountsKey(workspaceId), []);
-  return accounts.length ? accounts : defaultAccounts();
 }
 
 export function saveAccounts(workspaceId: string, accounts: TikTokAccount[]): void {

@@ -6,6 +6,7 @@ import { SourcingStep } from "@/components/studio/steps/sourcing-step";
 import { CleanStep } from "@/components/studio/steps/clean-step";
 import { ScheduleStep } from "@/components/studio/steps/schedule-step";
 import { AnalyticsStep } from "@/components/studio/steps/analytics-step";
+import { CampaignSetupRequired } from "@/components/studio/campaign-setup-required";
 import { useWorkspace } from "@/components/studio/workspace-context";
 import type { WorkflowStep } from "@/lib/workspace/types";
 
@@ -23,7 +24,7 @@ function normalizeStep(raw: string | null): WorkflowStep | null {
 }
 
 function StudioContentInner() {
-  const { ready, step, setStep } = useWorkspace();
+  const { ready, step, setStep, studioReady } = useWorkspace();
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -36,6 +37,14 @@ function StudioContentInner() {
     return (
       <div className="k-page py-20 text-center text-sm k-text-muted">
         …
+      </div>
+    );
+  }
+
+  if (!studioReady) {
+    return (
+      <div className="k-page pb-10">
+        <CampaignSetupRequired />
       </div>
     );
   }

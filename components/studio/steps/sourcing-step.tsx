@@ -8,6 +8,7 @@ import { createCleanSlots } from "@/lib/workspace/storage";
 import type { TikTokImportResult } from "@/lib/sourcing/types";
 import { MOCK_SOURCING_FEED } from "@/lib/workspace/mock-sourcing";
 import type { Campaign } from "@/lib/workspace/types";
+import { AiPromptsBlock } from "../ai-prompts-block";
 import { useWorkspace } from "../workspace-context";
 
 function applyImport(
@@ -97,6 +98,7 @@ export function SourcingStep() {
   }
 
   return (
+    <>
     <section className="k-card">
       <h2 className="k-subheading">Importer ton TikTok</h2>
       <p className="mt-1 text-sm k-text-muted">
@@ -212,5 +214,7 @@ export function SourcingStep() {
         </ul>
       ) : null}
     </section>
+    <AiPromptsBlock />
+    </>
   );
 }

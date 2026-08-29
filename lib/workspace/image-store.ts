@@ -4,7 +4,7 @@ const DB_NAME = "carrousels-images";
 const DB_VERSION = 1;
 const STORE = "images";
 
-type ImageKind = "import" | "slide" | "account";
+type ImageKind = "import" | "slide" | "account" | "account-video";
 
 export function isDataImageUrl(url: string): boolean {
   return url.startsWith("data:");
@@ -42,12 +42,26 @@ function storageKeyAccount(campaignId: string, accountId: string, index: number)
   return `${campaignId}:account:${accountId}:${index}`;
 }
 
+function storageKeyAccountVideo(campaignId: string, accountId: string, index: number): string {
+  return `${campaignId}:account-video:${accountId}:${index}`;
+}
+
 function parseImageRef(
   ref: string,
 ):
   | { campaignId: string; kind: "import" | "slide"; index: number }
   | { campaignId: string; kind: "account"; accountId: string; index: number }
+  | { campaignId: string; kind: "account-video"; accountId: string; index: number }
   | null {
+  const videoMatch = ref.match(/^idb:([^:]+):account-video:([^:]+):(\d+)$/);
+  if (videoMatch) {
+    return {
+      campaignId: videoMatch[1],
+      kind: "account-video",
+      accountId: videoMatch[2],
+      index: Number.parseInt(videoMatch[3], 10),
+    };
+  }
   const accountMatch = ref.match(/^idb:([^:]+):account:([^:]+):(\d+)$/);
   if (accountMatch) {
     return {
@@ -119,7 +133,9 @@ export async function resolveImageUrl(url: string): Promise<string> {
   if (!parsed) return url;
 
   let key: string;
-  if (parsed.kind === "account") {
+  if (parsed.kind === "account-video") {
+    key = storageKeyAccountVideo(parsed.campaignId, parsed.accountId, parsed.index);
+  } else if (parsed.kind === "account") {
     key = storageKeyAccount(parsed.campaignId, parsed.accountId, parsed.index);
   } else {
     key =
@@ -141,7 +157,10 @@ async function persistUrl(
 
   let key: string;
   let ref: string;
-  if (kind === "account" && accountId) {
+  if (kind === "account-video" && accountId) {
+    key = storageKeyAccountVideo(campaignId, accountId, index);
+    ref = `idb:${campaignId}:account-video:${accountId}:${index}`;
+  } else if (kind === "account" && accountId) {
     key = storageKeyAccount(campaignId, accountId, index);
     ref = makeAccountImageRef(campaignId, accountId, index);
   } else if (kind === "import") {
@@ -183,7 +202,16 @@ export async function stripCampaignImages(campaign: Campaign): Promise<Campaign>
     }
   }
 
-  return { ...campaign, importedImages, slides, accountMedia };
+  const accountVideos: Record<string, string[]> = {};
+  if (campaign.accountVideos) {
+    for (const [accountId, urls] of Object.entries(campaign.accountVideos)) {
+      accountVideos[accountId] = await Promise.all(
+        urls.map((url, i) => persistUrl(campaign.id, "account-video", i, url, accountId)),
+      );
+    }
+  }
+
+  return { ...campaign, importedImages, slides, accountMedia, accountVideos };
 }
 
 export async function hydrateCampaignImages(campaign: Campaign): Promise<Campaign> {
@@ -205,5 +233,12 @@ export async function hydrateCampaignImages(campaign: Campaign): Promise<Campaig
     }
   }
 
-  return { ...campaign, importedImages, slides, accountMedia };
+  const accountVideos: Record<string, string[]> = {};
+  if (campaign.accountVideos) {
+    for (const [accountId, urls] of Object.entries(campaign.accountVideos)) {
+      accountVideos[accountId] = await Promise.all(urls.map((url) => resolveImageUrl(url)));
+    }
+  }
+
+  return { ...campaign, importedImages, slides, accountMedia, accountVideos };
 }

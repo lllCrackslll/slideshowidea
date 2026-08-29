@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Package, Plus, Send, X } from "lucide-react";
+import { Clapperboard, Images, Loader2, Package, Plus, Send, X } from "lucide-react";
 import { useRef, useState } from "react";
 import JSZip from "jszip";
 import { fileToDataUrl } from "@/lib/workspace/image-utils";
@@ -9,7 +9,7 @@ import {
   loadSchedule,
   saveSchedule,
 } from "@/lib/workspace/storage";
-import type { Campaign, ScheduledPost } from "@/lib/workspace/types";
+import type { Campaign, PublishFormat, ScheduledPost } from "@/lib/workspace/types";
 import { CampaignPicker } from "../campaign-picker";
 import { useWorkspace } from "../workspace-context";
 
@@ -23,15 +23,25 @@ function folderSlug(label: string) {
   );
 }
 
-function getAccountImages(campaign: Campaign, accountId: string): string[] {
+function getAccountFiles(campaign: Campaign, accountId: string, format: PublishFormat): string[] {
+  if (format === "video") {
+    return campaign.accountVideos?.[accountId] ?? [];
+  }
   return campaign.accountMedia?.[accountId] ?? [];
 }
 
-function setAccountImages(
+function setAccountFiles(
   campaign: Campaign,
   accountId: string,
   urls: string[],
+  format: PublishFormat,
 ): Campaign {
+  if (format === "video") {
+    return {
+      ...campaign,
+      accountVideos: { ...campaign.accountVideos, [accountId]: urls },
+    };
+  }
   return {
     ...campaign,
     accountMedia: { ...campaign.accountMedia, [accountId]: urls },
@@ -45,6 +55,14 @@ async function urlToBlob(url: string): Promise<Blob> {
   }
   const res = await fetch(`/api/sourcing/image?url=${encodeURIComponent(url)}`);
   return res.blob();
+}
+
+function extFromBlob(blob: Blob, fallback: string) {
+  if (blob.type.includes("mp4")) return "mp4";
+  if (blob.type.includes("webm")) return "webm";
+  if (blob.type.includes("jpeg") || blob.type.includes("jpg")) return "jpg";
+  if (blob.type.includes("png")) return "png";
+  return fallback;
 }
 
 export function ScheduleStep() {
@@ -65,45 +83,59 @@ export function ScheduleStep() {
 
   const c = campaign;
   const ws = workspace;
+  const publishAsVideo = c.publishFormat === "video";
 
-  async function addImages(accountId: string, files: FileList) {
-    const urls = await Promise.all(Array.from(files).map((f) => fileToDataUrl(f)));
-    const current = getAccountImages(c, accountId);
-    await updateCampaign(setAccountImages(c, accountId, [...current, ...urls]));
+  async function setPublishFormat(format: PublishFormat) {
+    await updateCampaign({ ...c, publishFormat: format });
   }
 
-  function removeImage(accountId: string, index: number) {
-    const next = getAccountImages(c, accountId).filter((_, i) => i !== index);
-    void updateCampaign(setAccountImages(c, accountId, next));
+  async function addFiles(accountId: string, files: FileList) {
+    const urls = await Promise.all(Array.from(files).map((f) => fileToDataUrl(f)));
+    const current = getAccountFiles(c, accountId, publishAsVideo ? "video" : "carousel");
+    await updateCampaign(
+      setAccountFiles(c, accountId, [...current, ...urls], publishAsVideo ? "video" : "carousel"),
+    );
+  }
+
+  function removeFile(accountId: string, index: number) {
+    const format = publishAsVideo ? "video" : "carousel";
+    const next = getAccountFiles(c, accountId, format).filter((_, i) => i !== index);
+    void updateCampaign(setAccountFiles(c, accountId, next, format));
   }
 
   async function exportZip() {
     setExporting(true);
     setMsg(null);
+    const format = publishAsVideo ? "video" : "carousel";
     try {
       const zip = new JSZip();
       let exported = 0;
 
       for (const acc of accounts) {
-        const images = getAccountImages(c, acc.id);
-        if (!images.length) continue;
+        const files = getAccountFiles(c, acc.id, format);
+        if (!files.length) continue;
         const root = zip.folder(folderSlug(acc.label));
         if (!root) continue;
-        for (let i = 0; i < images.length; i += 1) {
-          const blob = await urlToBlob(images[i]);
-          root.file(`slide-${i + 1}.jpg`, blob);
+
+        if (format === "video") {
+          const blob = await urlToBlob(files[0]);
+          root.file(`video.${extFromBlob(blob, "mp4")}`, blob);
+        } else {
+          for (let i = 0; i < files.length; i += 1) {
+            const blob = await urlToBlob(files[i]);
+            root.file(`slide-${i + 1}.${extFromBlob(blob, "jpg")}`, blob);
+          }
         }
+
         root.file(
           "caption.txt",
-          [c.caption, acc.promoCode && `Code: ${acc.promoCode}`, acc.storeUrl]
-            .filter(Boolean)
-            .join("\n"),
+          [c.caption, acc.promoCode && `Code: ${acc.promoCode}`].filter(Boolean).join("\n"),
         );
         exported += 1;
       }
 
       if (!exported) {
-        setMsg("Ajoute des images par compte");
+        setMsg(publishAsVideo ? "Ajoute une vidéo par compte" : "Ajoute des images par compte");
         return;
       }
 
@@ -121,9 +153,10 @@ export function ScheduleStep() {
   }
 
   async function schedule() {
+    const format = publishAsVideo ? "video" : "carousel";
     const posts: ScheduledPost[] = [];
     accounts.forEach((acc, i) => {
-      if (!getAccountImages(c, acc.id).length) return;
+      if (!getAccountFiles(c, acc.id, format).length) return;
       const d = new Date();
       d.setHours(acc.publishHour, acc.publishMinute + i * 30, 0, 0);
       posts.push({
@@ -131,12 +164,13 @@ export function ScheduleStep() {
         campaignId: c.id,
         accountId: acc.id,
         scheduledAt: d.toISOString(),
+        format,
         status: "queued",
       });
     });
 
     if (!posts.length) {
-      setMsg("Ajoute des images par compte");
+      setMsg(publishAsVideo ? "Ajoute une vidéo par compte" : "Ajoute des images par compte");
       return;
     }
 
@@ -146,18 +180,39 @@ export function ScheduleStep() {
     setMsg(`${posts.length} posts programmés`);
   }
 
-  const filledAccounts = accounts.filter((a) => getAccountImages(c, a.id).length > 0).length;
+  const filledAccounts = accounts.filter((a) =>
+    getAccountFiles(c, a.id, publishAsVideo ? "video" : "carousel").length > 0,
+  ).length;
 
   return (
     <section className="k-card">
       <h2 className="k-subheading">Publier</h2>
       <p className="mt-1 text-sm k-text-muted">
-        Choisis ta campagne · insère les images par compte
+        Carrousel ou vidéo · un pack par compte
       </p>
 
       <div className="mt-4 max-w-sm">
         <CampaignPicker />
       </div>
+
+      <label className="k-row mt-4 flex cursor-pointer items-center gap-3">
+        <input
+          type="checkbox"
+          checked={publishAsVideo}
+          onChange={(e) => void setPublishFormat(e.target.checked ? "video" : "carousel")}
+          className="h-4 w-4 accent-[var(--accent)]"
+        />
+        <span className="flex items-center gap-2 text-sm k-text">
+          <Clapperboard className="h-4 w-4 k-accent" />
+          Publier en vidéo
+        </span>
+        {!publishAsVideo ? (
+          <span className="ml-auto flex items-center gap-1 text-xs k-text-muted">
+            <Images className="h-3.5 w-3.5" />
+            Carrousel
+          </span>
+        ) : null}
+      </label>
 
       {!accounts.length ? (
         <p className="mt-4 text-sm k-text-muted">
@@ -170,7 +225,7 @@ export function ScheduleStep() {
       ) : (
         <ul className="mt-5 space-y-4">
           {accounts.map((acc) => {
-            const images = getAccountImages(c, acc.id);
+            const files = getAccountFiles(c, acc.id, publishAsVideo ? "video" : "carousel");
             return (
               <li key={acc.id} className="k-row">
                 <div className="mb-3 flex items-center justify-between gap-2">
@@ -181,43 +236,62 @@ export function ScheduleStep() {
                     className="k-btn-ghost py-1"
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    Ajouter
+                    {publishAsVideo ? "Vidéo" : "Images"}
                   </button>
                   <input
                     ref={(el) => {
                       inputRefs.current[acc.id] = el;
                     }}
                     type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    multiple
+                    accept={
+                      publishAsVideo
+                        ? "video/mp4,video/quicktime,video/webm"
+                        : "image/jpeg,image/png,image/webp"
+                    }
+                    multiple={!publishAsVideo}
                     className="sr-only"
                     onChange={(e) => {
-                      if (e.target.files?.length) void addImages(acc.id, e.target.files);
+                      if (e.target.files?.length) void addFiles(acc.id, e.target.files);
                       e.target.value = "";
                     }}
                   />
                 </div>
 
-                {images.length ? (
-                  <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-                    {images.map((url, i) => (
-                      <li
-                        key={`${acc.id}-${i}`}
-                        className="relative aspect-[9/16] overflow-hidden rounded-lg border border-[var(--border)]"
+                {files.length ? (
+                  publishAsVideo ? (
+                    <div className="relative aspect-[9/16] max-w-[160px] overflow-hidden rounded-lg border border-[var(--border)]">
+                      <video src={files[0]} className="h-full w-full object-cover" controls muted />
+                      <button
+                        type="button"
+                        onClick={() => removeFile(acc.id, 0)}
+                        className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-md bg-black/55 text-white"
                       >
-                        <img src={url} alt="" className="h-full w-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => removeImage(acc.id, i)}
-                          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-md bg-black/55 text-white"
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                      {files.map((url, i) => (
+                        <li
+                          key={`${acc.id}-${i}`}
+                          className="relative aspect-[9/16] overflow-hidden rounded-lg border border-[var(--border)]"
                         >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
+                          <img src={url} alt="" className="h-full w-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => removeFile(acc.id, i)}
+                            className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-md bg-black/55 text-white"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )
                 ) : (
-                  <p className="text-xs k-text-muted">Aucune image</p>
+                  <p className="text-xs k-text-muted">
+                    {publishAsVideo ? "Aucune vidéo" : "Aucune image"}
+                  </p>
                 )}
               </li>
             );

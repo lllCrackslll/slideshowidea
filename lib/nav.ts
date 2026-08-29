@@ -12,6 +12,6 @@ export type NavItem = {
 export const MAIN_NAV: NavItem[] = [];
 
 export const SECONDARY_NAV: NavItem[] = [
-  { href: "/setup", label: "Comptes", icon: Settings2 },
   { href: "/repurpose", label: "Repurpose", icon: Clapperboard },
+  { href: "/setup", label: "Comptes", icon: Settings2 },
 ];

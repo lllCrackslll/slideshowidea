@@ -11,8 +11,9 @@ import {
 } from "react";
 import {
   createDefaultCampaign,
-  deleteCampaign as removeCampaign,
+  createDefaultWorkspace,
   deleteWorkspace as removeWorkspace,
+  ensureWorkspaceCampaign,
   getActiveCampaignId,
   getActiveWorkspaceId,
   getWorkflowStep,
@@ -34,24 +35,29 @@ import type {
   Workspace,
 } from "@/lib/workspace/types";
 
+function resolveActiveWorkspaceId(wsList: Workspace[]): string | null {
+  const stored = getActiveWorkspaceId();
+  if (stored && wsList.some((w) => w.id === stored)) return stored;
+  return wsList[0]?.id ?? null;
+}
+
 type WorkspaceContextValue = {
   ready: boolean;
   workspaces: Workspace[];
   workspace: Workspace | null;
-  campaigns: Campaign[];
   campaign: Campaign | null;
   accounts: TikTokAccount[];
   step: WorkflowStep;
   setStep: (step: WorkflowStep) => void;
-  selectWorkspace: (id: string) => void;
-  selectCampaign: (id: string) => void;
-  addWorkspace: (name: string) => void;
-  addCampaign: (name: string) => Promise<void>;
+  /** Choisir une campagne (= app). */
+  selectApp: (id: string) => void;
+  addApp: (name: string) => void;
+  updateApp: (partial: Partial<Workspace>) => void;
+  deleteApp: (id: string) => void;
   updateCampaign: (campaign: Campaign) => Promise<void>;
   updateAccounts: (accounts: TikTokAccount[]) => void;
-  updateWorkspace: (partial: Partial<Workspace>) => void;
-  deleteWorkspace: (id: string) => void;
-  deleteCampaign: (id: string) => void;
+  /** Campagne active + au moins un compte TikTok. */
+  studioReady: boolean;
 };
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -60,38 +66,48 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
-  const [campaignId, setCampaignId] = useState<string | null>(null);
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [accounts, setAccounts] = useState<TikTokAccount[]>([]);
   const [step, setStepState] = useState<WorkflowStep>("sourcing");
+
+  const loadApp = useCallback(async (id: string) => {
+    const camps = await loadCampaignsHydrated(id);
+    const camp = camps.find((c) => c.id === id) ?? camps[0] ?? null;
+    setCampaign(camp);
+    if (camp) {
+      setActiveCampaignId(camp.id);
+    }
+  }, []);
 
   useEffect(() => {
     async function boot() {
       const wsList = loadWorkspaces();
-      const activeWs = getActiveWorkspaceId() ?? wsList[0]?.id ?? null;
+      const activeWs = resolveActiveWorkspaceId(wsList);
       if (activeWs) purgeLegacyCampaignBlobs(activeWs);
-      const camps = activeWs ? await loadCampaignsHydrated(activeWs) : [];
-      const activeCamp = getActiveCampaignId() ?? camps[0]?.id ?? null;
 
       setWorkspaces(wsList);
       setWorkspaceId(activeWs);
-      setCampaigns(camps);
-      setCampaignId(activeCamp);
-      if (activeWs) setAccounts(loadAccounts(activeWs));
+      if (activeWs) {
+        setAccounts(loadAccounts(activeWs));
+        await loadApp(activeWs);
+      } else {
+        setCampaign(null);
+        setAccounts([]);
+      }
       setStepState(getWorkflowStep());
       setReady(true);
     }
     void boot();
-  }, []);
+  }, [loadApp]);
 
   const workspace = useMemo(
     () => workspaces.find((w) => w.id === workspaceId) ?? null,
     [workspaces, workspaceId],
   );
 
-  const campaign = useMemo(
-    () => campaigns.find((c) => c.id === campaignId) ?? null,
-    [campaigns, campaignId],
+  const studioReady = useMemo(
+    () => Boolean(workspace && campaign && accounts.length > 0),
+    [workspace, campaign, accounts.length],
   );
 
   const setStep = useCallback((next: WorkflowStep) => {
@@ -99,59 +115,68 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setWorkflowStep(next);
   }, []);
 
-  const selectWorkspace = useCallback((id: string) => {
-    setActiveWorkspaceId(id);
-    setWorkspaceId(id);
-    void loadCampaignsHydrated(id).then((camps) => {
-      setCampaigns(camps);
-      const first = camps[0]?.id ?? null;
-      if (first) {
-        setActiveCampaignId(first);
-        setCampaignId(first);
-      }
-    });
-    setAccounts(loadAccounts(id));
-  }, []);
+  const selectApp = useCallback(
+    (id: string) => {
+      setActiveWorkspaceId(id);
+      setWorkspaceId(id);
+      setAccounts(loadAccounts(id));
+      void loadApp(id);
+    },
+    [loadApp],
+  );
 
-  const selectCampaign = useCallback((id: string) => {
-    setActiveCampaignId(id);
-    setCampaignId(id);
-  }, []);
-
-  const addWorkspace = useCallback(
+  const addApp = useCallback(
     (name: string) => {
-      const ws: Workspace = {
-        id: `ws-${Date.now()}`,
-        name: name.trim() || "Nouvelle app",
-        niche: "Général",
-        handle: "@monapp",
-        createdAt: new Date().toISOString(),
-      };
+      const ws = createDefaultWorkspace();
+      ws.name = name.trim() || "Nouvelle campagne";
+      ws.handle = "@monapp";
+
       const next = [...workspaces, ws];
       saveWorkspaces(next);
       setWorkspaces(next);
-      saveAccounts(ws.id, loadAccounts(ws.id));
-      selectWorkspace(ws.id);
-      const camp = createDefaultCampaign(ws.id);
-      void upsertCampaign(ws.id, camp).then(async () => {
-        setCampaigns(await loadCampaignsHydrated(ws.id));
+      saveAccounts(ws.id, []);
+
+      const camp = createDefaultCampaign(ws.id, ws.name);
+      void upsertCampaign(ws.id, camp).then(() => {
+        selectApp(ws.id);
       });
-      setCampaignId(camp.id);
-      setActiveCampaignId(camp.id);
     },
-    [workspaces, selectWorkspace],
+    [workspaces, selectApp],
   );
 
-  const addCampaign = useCallback(
-    async (name: string) => {
-      if (!workspaceId) return;
-      const camp = createDefaultCampaign(workspaceId, name.trim() || "Nouvelle campagne");
-      await upsertCampaign(workspaceId, camp);
-      const camps = await loadCampaignsHydrated(workspaceId);
-      setCampaigns(camps);
-      selectCampaign(camp.id);
+  const updateApp = useCallback(
+    (partial: Partial<Workspace>) => {
+      if (!workspace) return;
+      const nextWs = { ...workspace, ...partial };
+      const nextList = workspaces.map((w) => (w.id === workspace.id ? nextWs : w));
+      saveWorkspaces(nextList);
+      setWorkspaces(nextList);
+
+      if (partial.name && campaign) {
+        void upsertCampaign(workspace.id, { ...campaign, name: partial.name }).then((saved) => {
+          setCampaign(saved);
+        });
+      }
     },
-    [workspaceId, selectCampaign],
+    [workspace, workspaces, campaign],
+  );
+
+  const deleteApp = useCallback(
+    (id: string) => {
+      removeWorkspace(id);
+      const wsList = loadWorkspaces();
+      setWorkspaces(wsList);
+      const activeWs = resolveActiveWorkspaceId(wsList);
+      setWorkspaceId(activeWs);
+      if (activeWs) {
+        setAccounts(loadAccounts(activeWs));
+        void loadApp(activeWs);
+      } else {
+        setCampaign(null);
+        setAccounts([]);
+      }
+    },
+    [loadApp],
   );
 
   const updateCampaign = useCallback(
@@ -159,9 +184,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (!workspaceId) return;
       try {
         const saved = await upsertCampaign(workspaceId, updated);
-        const camps = await loadCampaignsHydrated(workspaceId);
-        setCampaigns(camps);
-        setCampaignId(saved.id);
+        setCampaign(saved);
       } catch (error) {
         console.error("[workspace] save campaign", error);
         throw error;
@@ -179,64 +202,21 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [workspaceId],
   );
 
-  const deleteWorkspace = useCallback(
-    (id: string) => {
-      removeWorkspace(id);
-      const wsList = loadWorkspaces();
-      setWorkspaces(wsList);
-      const activeWs = getActiveWorkspaceId() ?? wsList[0]?.id ?? null;
-      setWorkspaceId(activeWs);
-      if (activeWs) {
-        void loadCampaignsHydrated(activeWs).then(setCampaigns);
-        setAccounts(loadAccounts(activeWs));
-        setCampaignId(getActiveCampaignId() ?? null);
-      }
-    },
-    [],
-  );
-
-  const deleteCampaign = useCallback(
-    (id: string) => {
-      if (!workspaceId) return;
-      removeCampaign(workspaceId, id);
-      void loadCampaignsHydrated(workspaceId).then((camps) => {
-        setCampaigns(camps);
-        setCampaignId(getActiveCampaignId() ?? camps[0]?.id ?? null);
-      });
-    },
-    [workspaceId],
-  );
-
-  const updateWorkspace = useCallback(
-    (partial: Partial<Workspace>) => {
-      if (!workspace) return;
-      const next = workspaces.map((w) =>
-        w.id === workspace.id ? { ...w, ...partial } : w,
-      );
-      saveWorkspaces(next);
-      setWorkspaces(next);
-    },
-    [workspace, workspaces],
-  );
-
   const value: WorkspaceContextValue = {
     ready,
     workspaces,
     workspace,
-    campaigns,
     campaign,
     accounts,
     step,
     setStep,
-    selectWorkspace,
-    selectCampaign,
-    addWorkspace,
-    addCampaign,
+    selectApp,
+    addApp,
+    updateApp,
+    deleteApp,
     updateCampaign,
     updateAccounts,
-    updateWorkspace,
-    deleteWorkspace,
-    deleteCampaign,
+    studioReady,
   };
 
   return (

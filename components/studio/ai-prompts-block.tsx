@@ -39,7 +39,7 @@ export function AiPromptsBlock() {
   const appName = workspace?.name?.trim() || "Mon app";
 
   return (
-    <section className="k-card-flat mb-4">
+    <section className="k-card-flat mt-4">
       <p className="k-label mb-3">Prompts IA</p>
       <div className="space-y-3">
         <PromptRow label="Traduction seule" text={PROMPT_TRANSLATE} />

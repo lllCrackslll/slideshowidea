@@ -27,6 +27,8 @@ export type CampaignStatus = "draft" | "ready" | "scheduled" | "published";
 
 export const CLEAN_SLOT_COUNT = 10;
 
+export type PublishFormat = "carousel" | "video";
+
 export type Campaign = {
   id: string;
   workspaceId: string;
@@ -38,6 +40,9 @@ export type Campaign = {
   importedImages?: string[];
   /** Images par compte TikTok (accountId → urls). */
   accountMedia?: Record<string, string[]>;
+  /** Vidéos par compte (mode publication vidéo). */
+  accountVideos?: Record<string, string[]>;
+  publishFormat?: PublishFormat;
   slides: CampaignSlide[];
   caption: string;
   hashtags: string[];
@@ -69,6 +74,7 @@ export type ScheduledPost = {
   campaignId: string;
   accountId: string;
   scheduledAt: string;
+  format?: PublishFormat;
   status: "queued" | "simulated" | "published";
 };
 

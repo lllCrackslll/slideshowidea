@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2, Package, Sparkles } from "lucide-react";
 import { RepurposeSettingsPanel } from "@/components/repurpose/repurpose-settings-panel";
 import { FileDropzone } from "@/components/shell/file-dropzone";
@@ -14,6 +14,7 @@ import {
 } from "@/lib/repurpose/download-zip";
 import { getToolGuide } from "@/lib/tool-guides";
 import {
+  BUILTIN_PRESETS,
   DEFAULT_REPURPOSE_SETTINGS,
   allPresets,
   deleteCustomPreset,
@@ -53,9 +54,15 @@ export function RepurposeTool() {
   const resultsRef = useRef(results);
   resultsRef.current = results;
 
-  const presets = useMemo(() => allPresets(), [presetName, customPresetName]);
+  const [presets, setPresets] =
+    useState<Record<string, RepurposeSettings>>(BUILTIN_PRESETS);
+
+  function refreshPresets() {
+    setPresets(allPresets());
+  }
 
   useEffect(() => {
+    refreshPresets();
     return () => releaseResults(resultsRef.current);
   }, []);
 
@@ -152,6 +159,7 @@ export function RepurposeTool() {
     const name = customPresetName.trim();
     if (!name) return;
     saveCustomPreset(name, settings);
+    refreshPresets();
     setPresetName(name);
     setCustomPresetName("");
     setMessage(`Preset « ${name} » sauvegardé.`);
@@ -160,6 +168,7 @@ export function RepurposeTool() {
   function handleDeletePreset() {
     if (presetName in presets && !(presetName in { "Instagram Preset": 1, "TikTok Preset": 1 })) {
       deleteCustomPreset(presetName);
+      refreshPresets();
       applyPreset("Instagram Preset");
       setMessage(`Preset « ${presetName} » supprimé.`);
     }

@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { loadMetrics } from "@/lib/workspace/storage";
+import { CampaignPicker } from "../campaign-picker";
 import { useWorkspace } from "../workspace-context";
 
 export function AnalyticsStep() {
-  const { workspace, campaigns, accounts, campaign } = useWorkspace();
+  const { workspace, accounts, campaign } = useWorkspace();
   const [metrics, setMetrics] = useState<
     Record<string, { views: number; engagementRate: number; promoUses: number }>
   >({});
@@ -21,7 +22,15 @@ export function AnalyticsStep() {
 
   return (
     <section className="k-card">
-      <h2 className="k-subheading">{campaign?.name ?? "Stats"}</h2>
+      <h2 className="k-subheading">Stats</h2>
+
+      <div className="mt-4 max-w-sm">
+        <CampaignPicker />
+      </div>
+
+      {campaign ? (
+        <p className="mt-2 text-xs k-text-muted">{campaign.status}</p>
+      ) : null}
 
       <div className="mt-5 grid grid-cols-3 gap-3">
         <div className="k-card-flat text-center">
@@ -29,8 +38,8 @@ export function AnalyticsStep() {
           <p className="k-heading mt-1 text-lg">{totalViews.toLocaleString("fr-FR")}</p>
         </div>
         <div className="k-card-flat text-center">
-          <p className="k-label">Campagnes</p>
-          <p className="k-heading mt-1 text-lg">{campaigns.length}</p>
+          <p className="k-label">Comptes</p>
+          <p className="k-heading mt-1 text-lg">{accounts.length}</p>
         </div>
         <div className="k-card-flat text-center">
           <p className="k-label">Promo</p>

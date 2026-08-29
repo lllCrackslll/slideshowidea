@@ -5,7 +5,6 @@ import { useRef, useState } from "react";
 import { fileToDataUrl } from "@/lib/workspace/image-utils";
 import { cleanAllSlides } from "@/lib/workspace/slide-clean";
 import type { Campaign } from "@/lib/workspace/types";
-import { AiPromptsBlock } from "../ai-prompts-block";
 import { CampaignPicker } from "../campaign-picker";
 import { useWorkspace } from "../workspace-context";
 
@@ -56,19 +55,16 @@ export function CleanStep() {
   }
 
   async function runClean() {
-    const allUrls = accounts.flatMap((acc) => getAccountImages(c, acc.id));
-    if (!allUrls.length) return;
+    const hasAny = accounts.some((acc) => getAccountImages(c, acc.id).length > 0);
+    if (!hasAny) return;
 
     setBusy(true);
     try {
-      const cleaned = await cleanAllSlides(allUrls);
-      const cleanedMap = new Map(allUrls.map((url, i) => [url, cleaned[i]]));
       const accountMedia: Record<string, string[]> = {};
 
       for (const acc of accounts) {
-        accountMedia[acc.id] = getAccountImages(c, acc.id).map(
-          (url) => cleanedMap.get(url) ?? url,
-        );
+        const urls = getAccountImages(c, acc.id);
+        accountMedia[acc.id] = urls.length ? await cleanAllSlides(urls) : [];
       }
 
       await updateCampaign({
@@ -87,8 +83,6 @@ export function CleanStep() {
   const filledAccounts = accounts.filter((a) => getAccountImages(c, a.id).length > 0).length;
 
   return (
-    <>
-      <AiPromptsBlock />
       <section className="k-card">
         <h2 className="k-subheading">Clean</h2>
         <p className="mt-1 text-sm k-text-muted">
@@ -189,6 +183,5 @@ export function CleanStep() {
 
         {done ? <p className="mt-3 text-center text-xs k-accent">Clean terminé</p> : null}
       </section>
-    </>
   );
 }
