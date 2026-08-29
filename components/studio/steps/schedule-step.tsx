@@ -1,7 +1,17 @@
 "use client";
 
-import { Clapperboard, Images, Loader2, Package, Plus, Send, X } from "lucide-react";
-import { useRef, useState } from "react";
+import {
+  CheckCircle2,
+  Clapperboard,
+  Clock,
+  Images,
+  Loader2,
+  Package,
+  Plus,
+  Send,
+  X,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import JSZip from "jszip";
 import { fileToDataUrl } from "@/lib/workspace/image-utils";
 import {
@@ -65,11 +75,55 @@ function extFromBlob(blob: Blob, fallback: string) {
   return fallback;
 }
 
+function formatWhen(iso: string) {
+  return new Date(iso).toLocaleString("fr-FR", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function statusLabel(status: ScheduledPost["status"]) {
+  if (status === "published") return "Publié sur TikTok";
+  if (status === "simulated") return "Simulé (local)";
+  return "En file";
+}
+
+function buildCaptionText(caption: string, promoCode?: string) {
+  return [caption.trim(), promoCode ? `Code: ${promoCode}` : ""].filter(Boolean).join("\n");
+}
+
 export function ScheduleStep() {
   const { workspace, campaign, accounts, updateCampaign, setStep } = useWorkspace();
   const [exporting, setExporting] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [caption, setCaption] = useState("");
+  const [hashtagText, setHashtagText] = useState("");
+  const [musicConsent, setMusicConsent] = useState(false);
+  const [lastBatch, setLastBatch] = useState<ScheduledPost[]>([]);
+  const [scheduleTick, setScheduleTick] = useState(0);
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const campaignId = campaign?.id;
+  const workspaceId = workspace?.id;
+
+  useEffect(() => {
+    if (!campaign) return;
+    setCaption(campaign.caption ?? "");
+    setHashtagText(campaign.hashtags?.join(" ") ?? "");
+    setLastBatch([]);
+  }, [campaignId]);
+
+  const recentPosts = useMemo(() => {
+    if (!workspaceId || !campaignId) return [];
+    void scheduleTick;
+    return loadSchedule(workspaceId)
+      .filter((post) => post.campaignId === campaignId)
+      .slice(-12)
+      .reverse();
+  }, [workspaceId, campaignId, scheduleTick]);
 
   if (!workspace) return null;
 
@@ -107,6 +161,7 @@ export function ScheduleStep() {
     setExporting(true);
     setMsg(null);
     const format = publishAsVideo ? "video" : "carousel";
+    const fullCaption = [caption.trim(), hashtagText.trim()].filter(Boolean).join("\n");
     try {
       const zip = new JSZip();
       let exported = 0;
@@ -127,10 +182,7 @@ export function ScheduleStep() {
           }
         }
 
-        root.file(
-          "caption.txt",
-          [c.caption, acc.promoCode && `Code: ${acc.promoCode}`].filter(Boolean).join("\n"),
-        );
+        root.file("caption.txt", buildCaptionText(fullCaption, acc.promoCode));
         exported += 1;
       }
 
@@ -152,20 +204,40 @@ export function ScheduleStep() {
     }
   }
 
-  async function schedule() {
+  async function publish() {
+    if (!caption.trim()) {
+      setMsg("Ajoute une description avant de publier.");
+      return;
+    }
+    if (!musicConsent) {
+      setMsg("Coche la confirmation musique TikTok avant de publier.");
+      return;
+    }
+
     const format = publishAsVideo ? "video" : "carousel";
+    const hashtags = hashtagText
+      .split(/[\s,]+/)
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+      .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`));
+
+    const fullCaption = [caption.trim(), hashtags.join(" ")].filter(Boolean).join("\n");
     const posts: ScheduledPost[] = [];
+
     accounts.forEach((acc, i) => {
       if (!getAccountFiles(c, acc.id, format).length) return;
       const d = new Date();
       d.setHours(acc.publishHour, acc.publishMinute + i * 30, 0, 0);
+      const isConnected = acc.status === "connected";
       posts.push({
         id: `post-${Date.now()}-${i}`,
         campaignId: c.id,
         accountId: acc.id,
+        accountLabel: acc.label,
         scheduledAt: d.toISOString(),
         format,
-        status: "queued",
+        caption: buildCaptionText(fullCaption, acc.promoCode),
+        status: isConnected ? "simulated" : "simulated",
       });
     });
 
@@ -174,15 +246,30 @@ export function ScheduleStep() {
       return;
     }
 
-    saveSchedule(ws.id, [...loadSchedule(ws.id), ...posts]);
-    await updateCampaign({ ...c, status: "scheduled" });
-    posts.forEach((p) => bumpMetrics(ws.id, p.accountId));
-    setMsg(`${posts.length} publication${posts.length > 1 ? "s" : ""} lancée${posts.length > 1 ? "s" : ""}`);
+    setPublishing(true);
+    setMsg(null);
+
+    try {
+      saveSchedule(ws.id, [...loadSchedule(ws.id), ...posts]);
+      await updateCampaign({
+        ...c,
+        caption: caption.trim(),
+        hashtags,
+        status: "published",
+      });
+      posts.forEach((p) => bumpMetrics(ws.id, p.accountId));
+      setLastBatch(posts);
+      setScheduleTick((n) => n + 1);
+    } finally {
+      setPublishing(false);
+    }
   }
 
   const filledAccounts = accounts.filter((a) =>
     getAccountFiles(c, a.id, publishAsVideo ? "video" : "carousel").length > 0,
   ).length;
+
+  const displayPosts = lastBatch.length > 0 ? lastBatch : recentPosts.slice(0, 6);
 
   return (
     <section className="k-card">
@@ -193,6 +280,45 @@ export function ScheduleStep() {
 
       <div className="mt-4 max-w-sm">
         <CampaignPicker />
+      </div>
+
+      <div className="k-callout mt-4 text-xs leading-relaxed k-text-secondary">
+        La publication TikTok réelle arrive après approbation API. Pour l&apos;instant, tu
+        prépares le contenu ici — le bouton Publier enregistre la file et affiche le récap
+        par compte.
+      </div>
+
+      <div className="k-row mt-4 space-y-3">
+        <label className="block">
+          <span className="k-label mb-1 block">Description / légende</span>
+          <textarea
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            rows={4}
+            placeholder="Texte du post TikTok…"
+            className="k-input w-full resize-y px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="block">
+          <span className="k-label mb-1 block">Hashtags</span>
+          <input
+            value={hashtagText}
+            onChange={(e) => setHashtagText(e.target.value)}
+            placeholder="#app #fyp #marketing"
+            className="k-input h-10 w-full px-3 text-sm"
+          />
+        </label>
+        <label className="flex cursor-pointer items-start gap-2 text-xs k-text-muted">
+          <input
+            type="checkbox"
+            checked={musicConsent}
+            onChange={(e) => setMusicConsent(e.target.checked)}
+            className="mt-0.5 h-4 w-4 accent-[var(--accent)]"
+          />
+          <span>
+            By posting, you agree to TikTok&apos;s Music Usage Confirmation.
+          </span>
+        </label>
       </div>
 
       <label className="k-row mt-4 flex cursor-pointer items-center gap-3">
@@ -229,7 +355,13 @@ export function ScheduleStep() {
             return (
               <li key={acc.id} className="k-row">
                 <div className="mb-3 flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium k-text">{acc.label}</p>
+                  <div>
+                    <p className="text-sm font-medium k-text">{acc.label}</p>
+                    <p className="text-[10px] k-text-muted">
+                      {acc.status === "connected" ? "TikTok connecté" : "Non connecté"} ·{" "}
+                      {acc.publishHour}h{String(acc.publishMinute).padStart(2, "0")}
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => inputRefs.current[acc.id]?.click()}
@@ -319,16 +451,58 @@ export function ScheduleStep() {
         </button>
         <button
           type="button"
-          disabled={filledAccounts === 0}
-          onClick={() => void schedule()}
+          disabled={filledAccounts === 0 || publishing || !caption.trim() || !musicConsent}
+          onClick={() => void publish()}
           className="k-btn-accent flex-1"
         >
-          <Send className="h-4 w-4" />
+          {publishing ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
           Publier
         </button>
       </div>
 
-      {msg ? <p className="mt-3 text-center text-xs k-accent">{msg}</p> : null}
+      {msg ? <p className="mt-3 text-center text-xs text-red-500">{msg}</p> : null}
+
+      {displayPosts.length ? (
+        <section className="k-card-flat mt-6">
+          <div className="mb-3 flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 k-accent" />
+            <h3 className="text-sm font-medium k-text">
+              {lastBatch.length
+                ? `${lastBatch.length} publication${lastBatch.length > 1 ? "s" : ""} enregistrée${lastBatch.length > 1 ? "s" : ""}`
+                : "Publications récentes"}
+            </h3>
+          </div>
+          <ul className="space-y-3">
+            {displayPosts.map((post) => {
+              const acc = accounts.find((a) => a.id === post.accountId);
+              return (
+                <li key={post.id} className="rounded-lg border border-[var(--border)] bg-[var(--surface-1)] p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-medium k-text">
+                      {post.accountLabel ?? acc?.label ?? post.accountId}
+                    </p>
+                    <span className="k-badge">{statusLabel(post.status)}</span>
+                  </div>
+                  <p className="mt-1 flex items-center gap-1 text-[10px] k-text-muted">
+                    <Clock className="h-3 w-3" />
+                    {formatWhen(post.scheduledAt)} ·{" "}
+                    {post.format === "video" ? "Vidéo" : "Carrousel"}
+                  </p>
+                  {post.caption ? (
+                    <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-xs k-text-secondary">
+                      {post.caption}
+                    </p>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
 
       <button
         type="button"

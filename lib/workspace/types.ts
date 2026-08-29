@@ -73,8 +73,10 @@ export type ScheduledPost = {
   id: string;
   campaignId: string;
   accountId: string;
+  accountLabel?: string;
   scheduledAt: string;
   format?: PublishFormat;
+  caption?: string;
   status: "queued" | "simulated" | "published";
 };
 
