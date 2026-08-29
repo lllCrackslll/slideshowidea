@@ -1,7 +1,8 @@
 "use client";
 
-import { Pencil, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Link2, Pencil, Plus, Trash2, Unlink } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useWorkspace } from "@/components/studio/workspace-context";
 import type { TikTokAccount, Workspace } from "@/lib/workspace/types";
 
@@ -58,6 +59,83 @@ export function SetupApp() {
   const [newName, setNewName] = useState("");
   const [editApp, setEditApp] = useState<Workspace | null>(null);
   const [editAcc, setEditAcc] = useState<TikTokAccount | null>(null);
+  const [oauthMsg, setOauthMsg] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const accountsRef = useRef(accounts);
+  accountsRef.current = accounts;
+
+  const syncTikTokConnections = useCallback(async () => {
+    if (!workspace) return;
+    try {
+      const res = await fetch(
+        `/api/tiktok/connections?workspaceId=${encodeURIComponent(workspace.id)}`,
+      );
+      if (!res.ok) return;
+      const payload = (await res.json()) as {
+        connections: Array<{
+          accountId: string;
+          displayName?: string;
+        }>;
+      };
+      const linkedIds = new Set(payload.connections.map((item) => item.accountId));
+      const displayNames = new Map(
+        payload.connections.map((item) => [item.accountId, item.displayName]),
+      );
+
+      updateAccounts(
+        accountsRef.current.map((acc) => {
+          if (!linkedIds.has(acc.id)) {
+            return acc.status === "connected"
+              ? { ...acc, status: "disconnected" as const }
+              : acc;
+          }
+          const displayName = displayNames.get(acc.id);
+          return {
+            ...acc,
+            status: "connected" as const,
+            label: displayName
+              ? displayName.startsWith("@")
+                ? displayName
+                : `@${displayName}`
+              : acc.label,
+          };
+        }),
+      );
+    } catch {
+      /* API indisponible côté dev sans env */
+    }
+  }, [workspace, updateAccounts]);
+
+  useEffect(() => {
+    void syncTikTokConnections();
+  }, [workspace?.id, syncTikTokConnections]);
+
+  useEffect(() => {
+    const status = searchParams.get("tiktok");
+    if (status === "connected") {
+      void syncTikTokConnections();
+      setOauthMsg("Compte TikTok connecté.");
+      window.history.replaceState({}, "", "/setup");
+    } else if (status === "error") {
+      setOauthMsg("Connexion TikTok échouée. Vérifie la config API.");
+      window.history.replaceState({}, "", "/setup");
+    }
+  }, [searchParams, syncTikTokConnections]);
+
+  async function disconnectTikTok(accountId: string) {
+    if (!workspace) return;
+    await fetch("/api/tiktok/disconnect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workspaceId: workspace.id, accountId }),
+    });
+    updateAccounts(
+      accounts.map((acc) =>
+        acc.id === accountId ? { ...acc, status: "disconnected" as const } : acc,
+      ),
+    );
+    setOauthMsg("Compte TikTok déconnecté.");
+  }
 
   if (!ready) {
     return <div className="k-page py-20 text-center text-sm k-text-muted">…</div>;
@@ -180,6 +258,7 @@ export function SetupApp() {
         <p className="mt-1 text-xs k-text-muted">
           {workspace.name} · {accounts.length} compte{accounts.length > 1 ? "s" : ""}
         </p>
+        {oauthMsg ? <p className="mt-2 text-xs k-accent">{oauthMsg}</p> : null}
         <ul className="mt-4 space-y-3">
           {accounts.map((acc) => (
             <li key={acc.id} className="k-row">
@@ -209,11 +288,33 @@ export function SetupApp() {
                 <div className="flex flex-wrap items-start gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium k-text">{acc.label}</p>
+                    <p className="mt-0.5 text-xs k-text-muted">
+                      {acc.status === "connected" ? "TikTok connecté" : "Non connecté"}
+                    </p>
                     {acc.promoCode ? (
                       <p className="mt-0.5 text-xs k-text-muted">Code: {acc.promoCode}</p>
                     ) : null}
                   </div>
-                  <RowActions
+                  <div className="flex flex-wrap items-center gap-1">
+                    {acc.status === "connected" ? (
+                      <button
+                        type="button"
+                        onClick={() => void disconnectTikTok(acc.id)}
+                        className="k-btn-ghost h-9 px-2 text-xs"
+                      >
+                        <Unlink className="h-3.5 w-3.5" />
+                        Déconnecter
+                      </button>
+                    ) : (
+                      <a
+                        href={`/api/tiktok/auth?workspaceId=${encodeURIComponent(workspace.id)}&accountId=${encodeURIComponent(acc.id)}`}
+                        className="k-btn-secondary h-9 px-2 text-xs"
+                      >
+                        <Link2 className="h-3.5 w-3.5" />
+                        Connecter TikTok
+                      </a>
+                    )}
+                    <RowActions
                     editing={false}
                     onEdit={() => setEditAcc({ ...acc })}
                     onDelete={() => {
@@ -224,6 +325,7 @@ export function SetupApp() {
                     onSave={() => {}}
                     onCancel={() => {}}
                   />
+                  </div>
                 </div>
               )}
             </li>
