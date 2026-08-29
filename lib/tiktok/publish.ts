@@ -1,3 +1,4 @@
+import { formatTikTokError } from "./errors";
 import { getTikTokConfig } from "./config";
 import { toApiPostInfo, type TikTokPostSettings } from "./post-settings";
 import { buildStagingUrls, createStagingToken } from "./staging";
@@ -76,7 +77,7 @@ async function initVideoUpload(
 
   const payload = (await res.json()) as InitResponse;
   if (!res.ok || payload.error?.code !== "ok") {
-    throw new Error(payload.error?.message ?? "Initialisation TikTok échouée.");
+    throw new Error(formatTikTokError(payload.error?.code, payload.error?.message));
   }
 
   const publishId = payload.data?.publish_id;
@@ -137,12 +138,22 @@ export async function publishVideoToTikTok(params: {
   if (!params.settings.privacyLevel) {
     return { ok: false, mode: "inbox", error: "Confidentialité requise." };
   }
+  if (!params.settings.title.trim()) {
+    return { ok: false, mode: "inbox", error: "Titre requis." };
+  }
 
   try {
     const { token, connection: fresh } = await getConnectionToken(
       params.workspaceId,
       params.accountId,
     );
+    if (!fresh.scope.includes("video.publish")) {
+      return {
+        ok: false,
+        mode: "inbox",
+        error: "Reconnecte le compte avec le scope video.publish (Comptes → Déconnecter → Connecter).",
+      };
+    }
     const { publishId, uploadUrl, mode } = await initVideoUpload(
       token,
       params.video.byteLength,
@@ -171,14 +182,12 @@ async function initPhotoPost(
   const canDirectPost = scopes.includes("video.publish");
   const postMode = canDirectPost ? "DIRECT_POST" : "MEDIA_UPLOAD";
   const postInfo = toApiPostInfo(settings, caption);
-  const title = caption.split("\n")[0]?.slice(0, 90) || "Carrousel";
 
   const body: Record<string, unknown> = {
     media_type: "PHOTO",
     post_mode: postMode,
     post_info: {
       ...postInfo,
-      title,
       auto_add_music: true,
     },
     source_info: {
@@ -204,7 +213,7 @@ async function initPhotoPost(
 
   const payload = (await res.json()) as PhotoInitResponse;
   if (!res.ok || payload.error?.code !== "ok") {
-    throw new Error(payload.error?.message ?? "Initialisation carrousel TikTok échouée.");
+    throw new Error(formatTikTokError(payload.error?.code, payload.error?.message));
   }
 
   const publishId = payload.data?.publish_id;
@@ -232,12 +241,22 @@ export async function publishPhotosToTikTok(params: {
   if (!params.settings.privacyLevel) {
     return { ok: false, mode: "inbox", error: "Confidentialité requise." };
   }
+  if (!params.settings.title.trim()) {
+    return { ok: false, mode: "inbox", error: "Titre requis." };
+  }
 
   try {
     const { token, connection: fresh } = await getConnectionToken(
       params.workspaceId,
       params.accountId,
     );
+    if (!fresh.scope.includes("video.publish")) {
+      return {
+        ok: false,
+        mode: "inbox",
+        error: "Reconnecte le compte avec le scope video.publish (Comptes → Déconnecter → Connecter).",
+      };
+    }
     const stagingToken = createStagingToken(params.images, params.contentTypes);
     const photoUrls = buildStagingUrls(stagingToken, params.images.length);
     const { publishId, mode } = await initPhotoPost(

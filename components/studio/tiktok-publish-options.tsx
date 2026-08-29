@@ -104,6 +104,10 @@ export function TikTokPublishOptions({
     if (isVideo && videoDurationSec && videoDurationSec > creator.maxVideoPostDurationSec) {
       return `Vidéo trop longue (max ${creator.maxVideoPostDurationSec}s).`;
     }
+    if (settings.privacyLevel && settings.privacyLevel !== "SELF_ONLY") {
+      return "En sandbox, choisis « Moi seulement » pour la confidentialité.";
+    }
+    if (!settings.title.trim()) return "Ajoute un titre TikTok.";
     if (settings.commercialEnabled && settings.brandedContent && settings.privacyLevel === "SELF_ONLY") {
       return "Contenu de marque : la visibilité ne peut pas être privée.";
     }
@@ -127,6 +131,11 @@ export function TikTokPublishOptions({
     <section className="k-row mt-4 space-y-3">
       <p className="k-label">Paramètres TikTok</p>
 
+      <div className="k-callout text-xs leading-relaxed k-text-secondary">
+        <strong>Sandbox :</strong> compte TikTok en <strong>privé</strong> dans l&apos;app mobile +
+        confidentialité <strong>Moi seulement</strong>. Sinon TikTok renvoie l&apos;erreur guidelines.
+      </div>
+
       {loading ? (
         <p className="flex items-center gap-2 text-xs k-text-muted">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -149,6 +158,16 @@ export function TikTokPublishOptions({
           </div>
         </div>
       ) : null}
+
+      <label className="block">
+        <span className="k-label mb-1 block">Titre *</span>
+        <input
+          value={settings.title}
+          onChange={(e) => patch({ title: e.target.value })}
+          placeholder="Titre du post"
+          className="k-input h-10 w-full px-3 text-sm"
+        />
+      </label>
 
       <label className="block">
         <span className="k-label mb-1 block">Confidentialité *</span>

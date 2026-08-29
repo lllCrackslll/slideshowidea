@@ -10,6 +10,7 @@ export type TikTokCreatorInfo = {
 };
 
 export type TikTokPostSettings = {
+  title: string;
   privacyLevel: string;
   allowComment: boolean;
   allowDuet: boolean;
@@ -20,6 +21,7 @@ export type TikTokPostSettings = {
 };
 
 export const EMPTY_TIKTOK_POST_SETTINGS: TikTokPostSettings = {
+  title: "",
   privacyLevel: "",
   allowComment: false,
   allowDuet: false,
@@ -48,7 +50,7 @@ export function consentText(settings: TikTokPostSettings) {
 }
 
 export function canPublishWithSettings(settings: TikTokPostSettings, musicConsent: boolean) {
-  if (!musicConsent || !settings.privacyLevel) return false;
+  if (!musicConsent || !settings.privacyLevel || !settings.title.trim()) return false;
   if (settings.commercialEnabled && !settings.yourBrand && !settings.brandedContent) return false;
   if (settings.commercialEnabled && settings.brandedContent && settings.privacyLevel === "SELF_ONLY") {
     return false;
@@ -67,7 +69,7 @@ export function parsePostSettings(raw: string | null): TikTokPostSettings | null
 
 export function toApiPostInfo(settings: TikTokPostSettings, caption: string) {
   return {
-    title: caption.slice(0, 2200),
+    title: settings.title.trim().slice(0, 90),
     description: caption.slice(0, 4000),
     privacy_level: settings.privacyLevel,
     disable_comment: !settings.allowComment,
