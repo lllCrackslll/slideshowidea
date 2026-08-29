@@ -1,6 +1,9 @@
 import { BROWSER_HEADERS, resolveTikTokUrl } from "./normalize-url";
 import type { ImportedSlide, TikTokImportResult } from "./types";
 
+const REHYDRATION_RE =
+  /<script[^>]*id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\s\S]*?)<\/script>/i;
+
 function extractHashtags(text: string): string[] {
   const matches = text.match(/#[\w\u00C0-\u024F]+/g) ?? [];
   return [...new Set(matches.map((t) => t.replace(/^#/, "")))];
@@ -54,12 +57,23 @@ function collectImageUrls(node: unknown, out: string[] = []): string[] {
   return out;
 }
 
+function parseRehydrationJson(html: string): unknown | null {
+  const match = REHYDRATION_RE.exec(html);
+  if (!match?.[1]) return findJsonInHtml(html, "__UNIVERSAL_DATA_FOR_REHYDRATION__");
+
+  try {
+    return JSON.parse(match[1].trim());
+  } catch {
+    return findJsonInHtml(html, "__UNIVERSAL_DATA_FOR_REHYDRATION__");
+  }
+}
+
 function extractFromUniversalData(html: string): {
   caption: string;
   author: string;
   images: string[];
 } | null {
-  const data = findJsonInHtml(html, "__UNIVERSAL_DATA_FOR_REHYDRATION__");
+  const data = parseRehydrationJson(html);
   if (!data || typeof data !== "object") return null;
 
   const scope = (data as Record<string, unknown>)["__DEFAULT_SCOPE__"];
@@ -70,6 +84,11 @@ function extractFromUniversalData(html: string): {
     (scope as Record<string, unknown>)["webapp.reflow.video.detail"];
 
   if (!detail || typeof detail !== "object") return null;
+
+  const statusCode = (detail as Record<string, unknown>).statusCode;
+  if (statusCode !== undefined && statusCode !== 0 && statusCode !== "0") {
+    return null;
+  }
 
   const itemInfo = (detail as Record<string, unknown>).itemInfo;
   if (!itemInfo || typeof itemInfo !== "object") return null;
@@ -166,7 +185,11 @@ async function fetchOEmbedFallback(resolvedUrl: string): Promise<{
 }> {
   const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(resolvedUrl)}`;
   const res = await fetch(oembedUrl, { headers: BROWSER_HEADERS });
-  if (!res.ok) throw new Error("Impossible de lire ce post TikTok.");
+  if (!res.ok) {
+    throw new Error(
+      "TikTok a refusé l'aperçu — vérifie que le post est public et réessaie.",
+    );
+  }
 
   const data = (await res.json()) as {
     title?: string;
@@ -181,23 +204,10 @@ async function fetchOEmbedFallback(resolvedUrl: string): Promise<{
   };
 }
 
-async function imageToDataUrl(url: string): Promise<string> {
-  const res = await fetch(url, { headers: BROWSER_HEADERS });
-  if (!res.ok) throw new Error(`Image inaccessible: ${url.slice(0, 60)}…`);
-
-  const buf = await res.arrayBuffer();
-  if (buf.byteLength > 4_000_000) {
-    throw new Error("Image trop lourde (> 4 Mo).");
-  }
-
-  const mime = res.headers.get("content-type") ?? "image/jpeg";
-  const base64 = Buffer.from(buf).toString("base64");
-  return `data:${mime};base64,${base64}`;
-}
 
 function padSlides(images: string[], caption: string): ImportedSlide[] {
   const lines = caption.split("\n").filter(Boolean);
-  const slides: ImportedSlide[] = images.slice(0, 5).map((imageUrl, i) => ({
+  const slides: ImportedSlide[] = images.slice(0, 10).map((imageUrl, i) => ({
     imageUrl,
     text: lines[i] ?? "",
   }));
@@ -229,10 +239,16 @@ export async function importTikTokPost(rawUrl: string): Promise<TikTokImportResu
   let hint: string | undefined;
 
   if (!extracted || !extracted.images.length) {
-    extracted = await fetchOEmbedFallback(resolvedUrl);
-    partial = true;
-    hint =
-      "Une seule vignette récupérée — ajoute les autres slides manuellement dans l'éditeur.";
+    try {
+      extracted = await fetchOEmbedFallback(resolvedUrl);
+      partial = true;
+      hint =
+        "Une seule vignette récupérée — ajoute les autres slides manuellement dans l'éditeur.";
+    } catch {
+      throw new Error(
+        "Impossible de lire ce TikTok. Vérifie que c'est un carrousel photo public, ou passe par « Voir exemples » / l'éditeur.",
+      );
+    }
   }
 
   const { caption, author, images } = extracted;
@@ -244,12 +260,8 @@ export async function importTikTokPost(rawUrl: string): Promise<TikTokImportResu
   }
 
   const dataUrls: string[] = [];
-  for (const imgUrl of images.slice(0, 5)) {
-    try {
-      dataUrls.push(await imageToDataUrl(imgUrl));
-    } catch {
-      dataUrls.push(imgUrl);
-    }
+  for (const imgUrl of images.slice(0, 10)) {
+    dataUrls.push(imgUrl);
   }
 
   const slides = padSlides(dataUrls, caption);

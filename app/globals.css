@@ -21,6 +21,29 @@
   --accent: #0066ff;
   --accent-hover: #0052cc;
   --accent-soft: rgba(0, 102, 255, 0.1);
+  --bg-dot: rgba(0, 102, 255, 0.11);
+  --bg-dot-size: 16px;
+  --bg-weave: rgba(0, 102, 255, 0.045);
+  --bg-major: rgba(0, 102, 255, 0.07);
+  --bg-major-size: 64px;
+  --bg-aurora:
+    radial-gradient(ellipse 58% 48% at 8% -6%, rgba(0, 102, 255, 0.42), transparent 58%),
+    radial-gradient(ellipse 52% 42% at 94% 6%, rgba(56, 189, 248, 0.26), transparent 52%),
+    radial-gradient(ellipse 68% 52% at 50% 108%, rgba(0, 102, 255, 0.22), transparent 60%),
+    radial-gradient(ellipse 38% 32% at 72% 52%, rgba(0, 102, 255, 0.12), transparent 62%);
+  --bg-spot: radial-gradient(
+    ellipse 48% 32% at 50% -4%,
+    rgba(0, 102, 255, 0.32),
+    transparent 72%
+  );
+  --bg-beam: linear-gradient(
+    115deg,
+    transparent 42%,
+    rgba(0, 102, 255, 0.04) 49%,
+    rgba(0, 102, 255, 0.08) 50%,
+    rgba(0, 102, 255, 0.04) 51%,
+    transparent 58%
+  );
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 8px 24px -8px rgba(0, 102, 255, 0.12);
   --shadow-glow: 0 0 0 1px rgba(0, 102, 255, 0.08);
   --nav-highlight: transparent;
@@ -38,6 +61,61 @@
 
 html {
   color-scheme: light;
+  position: relative;
+  min-height: 100%;
+}
+
+html::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--surface-page);
+  background-image:
+    var(--bg-spot),
+    var(--bg-aurora),
+    var(--bg-beam),
+    repeating-linear-gradient(
+      120deg,
+      transparent 0 15px,
+      var(--bg-weave) 15px 16px
+    ),
+    repeating-linear-gradient(
+      60deg,
+      transparent 0 15px,
+      var(--bg-weave) 15px 16px
+    ),
+    linear-gradient(to right, var(--bg-major) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--bg-major) 1px, transparent 1px),
+    radial-gradient(circle, var(--bg-dot) 0.55px, transparent 0.55px);
+  background-size:
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    var(--bg-major-size) var(--bg-major-size),
+    var(--bg-major-size) var(--bg-major-size),
+    var(--bg-dot-size) var(--bg-dot-size);
+  background-position: center top, center center, center center, center center, center center, center center, center center, center center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html::before {
+    animation: k-aurora-drift 18s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes k-aurora-drift {
+  0% {
+    filter: hue-rotate(0deg) brightness(1);
+    transform: scale(1);
+  }
+  100% {
+    filter: hue-rotate(8deg) brightness(1.06);
+    transform: scale(1.02);
+  }
 }
 
 html.dark {
@@ -62,29 +140,37 @@ html.dark {
   --accent: #3b82f6;
   --accent-hover: #2563eb;
   --accent-soft: rgba(59, 130, 246, 0.15);
+  --bg-dot: rgba(96, 165, 250, 0.16);
+  --bg-weave: rgba(59, 130, 246, 0.07);
+  --bg-major: rgba(96, 165, 250, 0.1);
+  --bg-aurora:
+    radial-gradient(ellipse 62% 50% at 6% -4%, rgba(59, 130, 246, 0.58), transparent 56%),
+    radial-gradient(ellipse 55% 45% at 96% 8%, rgba(125, 211, 252, 0.32), transparent 50%),
+    radial-gradient(ellipse 75% 58% at 50% 112%, rgba(37, 99, 235, 0.35), transparent 58%),
+    radial-gradient(ellipse 42% 36% at 68% 48%, rgba(59, 130, 246, 0.22), transparent 60%);
+  --bg-spot: radial-gradient(
+    ellipse 52% 36% at 50% -2%,
+    rgba(59, 130, 246, 0.45),
+    transparent 70%
+  );
+  --bg-beam: linear-gradient(
+    115deg,
+    transparent 40%,
+    rgba(59, 130, 246, 0.06) 49%,
+    rgba(147, 197, 253, 0.14) 50%,
+    rgba(59, 130, 246, 0.06) 51%,
+    transparent 60%
+  );
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4), 0 8px 32px -8px rgba(0, 0, 0, 0.6);
   --shadow-glow: 0 0 0 1px rgba(59, 130, 246, 0.2);
 }
 
 body {
-  background-color: var(--surface-page);
-  background-image: radial-gradient(
-    ellipse 80% 50% at 50% -20%,
-    var(--accent-soft),
-    transparent 70%
-  );
+  background: transparent;
   color: var(--foreground);
   font-family: var(--font-apple);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-html.dark body {
-  background-image: radial-gradient(
-    ellipse 80% 45% at 50% -15%,
-    rgba(0, 102, 255, 0.18),
-    transparent 65%
-  );
 }
 
 ::selection {
@@ -138,6 +224,25 @@ html.dark body {
     background: var(--accent) !important;
     color: #fff !important;
     box-shadow: 0 2px 12px -2px rgba(0, 102, 255, 0.5);
+  }
+
+  .k-nav-stats {
+    @apply inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition-all;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--muted);
+  }
+
+  .k-nav-stats:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--surface-hover);
+  }
+
+  .k-nav-stats-active {
+    border-color: var(--accent);
+    background: var(--surface-accent);
+    color: var(--accent);
   }
 
   .k-page {

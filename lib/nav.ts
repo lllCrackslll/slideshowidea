@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Clapperboard } from "lucide-react";
+import { Clapperboard, Settings2 } from "lucide-react";
 
 export type NavItem = {
   href: string;
@@ -12,5 +12,6 @@ export type NavItem = {
 export const MAIN_NAV: NavItem[] = [];
 
 export const SECONDARY_NAV: NavItem[] = [
+  { href: "/setup", label: "Comptes", icon: Settings2 },
   { href: "/repurpose", label: "Repurpose", icon: Clapperboard },
 ];

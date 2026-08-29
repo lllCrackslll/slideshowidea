@@ -1,41 +1,80 @@
 "use client";
 
-import { Loader2, Package, Plus, Send } from "lucide-react";
-import { useState } from "react";
+import { Loader2, Package, Plus, Send, X } from "lucide-react";
+import { useRef, useState } from "react";
 import JSZip from "jszip";
-import { renderCampaignSlide } from "@/lib/workspace/campaign-export";
+import { fileToDataUrl } from "@/lib/workspace/image-utils";
 import {
   bumpMetrics,
   loadSchedule,
   saveSchedule,
 } from "@/lib/workspace/storage";
-import type { ScheduledPost, TikTokAccount } from "@/lib/workspace/types";
+import type { Campaign, ScheduledPost } from "@/lib/workspace/types";
+import { CampaignPicker } from "../campaign-picker";
 import { useWorkspace } from "../workspace-context";
 
-function folderSlug(label: string, i: number) {
+function folderSlug(label: string) {
   return (
     label
       .replace(/^@/, "")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
-      .slice(0, 32) || `compte-${i + 1}`
+      .slice(0, 32) || "compte"
   );
 }
 
+function getAccountImages(campaign: Campaign, accountId: string): string[] {
+  return campaign.accountMedia?.[accountId] ?? [];
+}
+
+function setAccountImages(
+  campaign: Campaign,
+  accountId: string,
+  urls: string[],
+): Campaign {
+  return {
+    ...campaign,
+    accountMedia: { ...campaign.accountMedia, [accountId]: urls },
+  };
+}
+
+async function urlToBlob(url: string): Promise<Blob> {
+  if (url.startsWith("data:") || url.startsWith("blob:")) {
+    const res = await fetch(url);
+    return res.blob();
+  }
+  const res = await fetch(`/api/sourcing/image?url=${encodeURIComponent(url)}`);
+  return res.blob();
+}
+
 export function ScheduleStep() {
-  const { workspace, campaign, accounts, updateAccounts, updateCampaign, setStep } =
-    useWorkspace();
-  const [selected, setSelected] = useState<string[]>(() => accounts.map((a) => a.id));
+  const { workspace, campaign, accounts, updateCampaign, setStep } = useWorkspace();
   const [exporting, setExporting] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  if (!campaign || !workspace) return null;
+  if (!workspace) return null;
+
+  if (!campaign) {
+    return (
+      <section className="k-card">
+        <CampaignPicker />
+      </section>
+    );
+  }
 
   const c = campaign;
   const ws = workspace;
 
-  function patch(id: string, p: Partial<TikTokAccount>) {
-    updateAccounts(accounts.map((a) => (a.id === id ? { ...a, ...p } : a)));
+  async function addImages(accountId: string, files: FileList) {
+    const urls = await Promise.all(Array.from(files).map((f) => fileToDataUrl(f)));
+    const current = getAccountImages(c, accountId);
+    await updateCampaign(setAccountImages(c, accountId, [...current, ...urls]));
+  }
+
+  function removeImage(accountId: string, index: number) {
+    const next = getAccountImages(c, accountId).filter((_, i) => i !== index);
+    void updateCampaign(setAccountImages(c, accountId, next));
   }
 
   async function exportZip() {
@@ -43,31 +82,37 @@ export function ScheduleStep() {
     setMsg(null);
     try {
       const zip = new JSZip();
-      const targets = selected.length ? selected : accounts.map((a) => a.id);
-      for (let i = 0; i < targets.length; i += 1) {
-        const acc = accounts.find((a) => a.id === targets[i]);
-        const root = zip.folder(folderSlug(acc?.label ?? `@c${i}`, i));
+      let exported = 0;
+
+      for (const acc of accounts) {
+        const images = getAccountImages(c, acc.id);
+        if (!images.length) continue;
+        const root = zip.folder(folderSlug(acc.label));
         if (!root) continue;
-        for (const slide of c.slides) {
-          const canvas = await renderCampaignSlide(slide, ws.handle);
-          const blob = await new Promise<Blob>((res, rej) =>
-            canvas.toBlob((b) => (b ? res(b) : rej()), "image/jpeg", 0.92),
-          );
-          root.file(`slide-${slide.order}.jpg`, blob);
+        for (let i = 0; i < images.length; i += 1) {
+          const blob = await urlToBlob(images[i]);
+          root.file(`slide-${i + 1}.jpg`, blob);
         }
         root.file(
           "caption.txt",
-          [c.caption, acc?.promoCode && `Code: ${acc.promoCode}`, acc?.storeUrl]
+          [c.caption, acc.promoCode && `Code: ${acc.promoCode}`, acc.storeUrl]
             .filter(Boolean)
             .join("\n"),
         );
+        exported += 1;
       }
+
+      if (!exported) {
+        setMsg("Ajoute des images par compte");
+        return;
+      }
+
       const blob = await zip.generateAsync({ type: "blob" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = `${c.name.slice(0, 24)}.zip`;
       a.click();
-      setMsg(`${targets.length} comptes exportés`);
+      setMsg(`${exported} compte${exported > 1 ? "s" : ""} exporté${exported > 1 ? "s" : ""}`);
     } catch {
       setMsg("Erreur export");
     } finally {
@@ -75,94 +120,119 @@ export function ScheduleStep() {
     }
   }
 
-  function schedule() {
-    const posts: ScheduledPost[] = selected.map((accountId, i) => {
-      const acc = accounts.find((a) => a.id === accountId)!;
+  async function schedule() {
+    const posts: ScheduledPost[] = [];
+    accounts.forEach((acc, i) => {
+      if (!getAccountImages(c, acc.id).length) return;
       const d = new Date();
       d.setHours(acc.publishHour, acc.publishMinute + i * 30, 0, 0);
-      return {
+      posts.push({
         id: `post-${Date.now()}-${i}`,
         campaignId: c.id,
-        accountId,
+        accountId: acc.id,
         scheduledAt: d.toISOString(),
-        status: "queued" as const,
-      };
+        status: "queued",
+      });
     });
+
+    if (!posts.length) {
+      setMsg("Ajoute des images par compte");
+      return;
+    }
+
     saveSchedule(ws.id, [...loadSchedule(ws.id), ...posts]);
-    updateCampaign({ ...c, status: "scheduled" });
+    await updateCampaign({ ...c, status: "scheduled" });
     posts.forEach((p) => bumpMetrics(ws.id, p.accountId));
     setMsg(`${posts.length} posts programmés`);
   }
 
+  const filledAccounts = accounts.filter((a) => getAccountImages(c, a.id).length > 0).length;
+
   return (
     <section className="k-card">
       <h2 className="k-subheading">Publier</h2>
+      <p className="mt-1 text-sm k-text-muted">
+        Choisis ta campagne · insère les images par compte
+      </p>
 
-      <ul className="mt-4 space-y-2">
-        {accounts.map((acc) => (
-          <li key={acc.id} className="k-row">
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                type="checkbox"
-                checked={selected.includes(acc.id)}
-                onChange={() =>
-                  setSelected((s) =>
-                    s.includes(acc.id) ? s.filter((x) => x !== acc.id) : [...s, acc.id],
-                  )
-                }
-                className="accent-[var(--accent)]"
-              />
-              <input
-                value={acc.label}
-                onChange={(e) => patch(acc.id, { label: e.target.value })}
-                className="k-input h-9 min-w-0 flex-1 px-2 text-sm"
-              />
-            </div>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              <input
-                value={acc.storeUrl}
-                onChange={(e) => patch(acc.id, { storeUrl: e.target.value })}
-                placeholder="Lien App Store"
-                className="k-input h-9 text-xs"
-              />
-              <input
-                value={acc.promoCode}
-                onChange={(e) => patch(acc.id, { promoCode: e.target.value })}
-                placeholder="Code promo"
-                className="k-input h-9 text-xs"
-              />
-            </div>
-          </li>
-        ))}
-      </ul>
+      <div className="mt-4 max-w-sm">
+        <CampaignPicker />
+      </div>
 
-      <button
-        type="button"
-        onClick={() =>
-          updateAccounts([
-            ...accounts,
-            {
-              id: `acc-${Date.now()}`,
-              label: `@compte-${accounts.length + 1}`,
-              persona: "",
-              storeUrl: "",
-              promoCode: "",
-              publishHour: 9,
-              publishMinute: 0,
-              status: "disconnected",
-            },
-          ])
-        }
-        className="k-btn-ghost mt-3"
-      >
-        <Plus className="h-4 w-4" />
-        Compte
-      </button>
+      {!accounts.length ? (
+        <p className="mt-4 text-sm k-text-muted">
+          Ajoute des comptes dans{" "}
+          <a href="/setup" className="k-link">
+            Comptes
+          </a>
+          .
+        </p>
+      ) : (
+        <ul className="mt-5 space-y-4">
+          {accounts.map((acc) => {
+            const images = getAccountImages(c, acc.id);
+            return (
+              <li key={acc.id} className="k-row">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium k-text">{acc.label}</p>
+                  <button
+                    type="button"
+                    onClick={() => inputRefs.current[acc.id]?.click()}
+                    className="k-btn-ghost py-1"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Ajouter
+                  </button>
+                  <input
+                    ref={(el) => {
+                      inputRefs.current[acc.id] = el;
+                    }}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    className="sr-only"
+                    onChange={(e) => {
+                      if (e.target.files?.length) void addImages(acc.id, e.target.files);
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
+
+                {images.length ? (
+                  <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                    {images.map((url, i) => (
+                      <li
+                        key={`${acc.id}-${i}`}
+                        className="relative aspect-[9/16] overflow-hidden rounded-lg border border-[var(--border)]"
+                      >
+                        <img src={url} alt="" className="h-full w-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(acc.id, i)}
+                          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-md bg-black/55 text-white"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs k-text-muted">Aucune image</p>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <p className="mt-4 text-center text-xs k-text-muted">
+        {filledAccounts}/{accounts.length} comptes prêts
+      </p>
 
       <div className="mt-5 flex flex-col gap-2 sm:flex-row">
         <button
           type="button"
-          disabled={exporting}
+          disabled={exporting || filledAccounts === 0}
           onClick={() => void exportZip()}
           className="k-btn-primary flex-1"
         >
@@ -173,7 +243,12 @@ export function ScheduleStep() {
           )}
           ZIP multi-comptes
         </button>
-        <button type="button" onClick={schedule} className="k-btn-accent flex-1">
+        <button
+          type="button"
+          disabled={filledAccounts === 0}
+          onClick={() => void schedule()}
+          className="k-btn-accent flex-1"
+        >
           <Send className="h-4 w-4" />
           Programmer
         </button>

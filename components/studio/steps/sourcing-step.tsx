@@ -1,46 +1,52 @@
 "use client";
 
-import { ArrowRight, Link2, Loader2 } from "lucide-react";
+import { Download, Link2, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { placeholderUrl } from "@/lib/workspace/campaign-export";
+import { isGradientPlaceholder, placeholderUrl } from "@/lib/workspace/campaign-export";
+import { downloadImageUrl, downloadText } from "@/lib/workspace/image-utils";
+import { createCleanSlots } from "@/lib/workspace/storage";
 import type { TikTokImportResult } from "@/lib/sourcing/types";
 import { MOCK_SOURCING_FEED } from "@/lib/workspace/mock-sourcing";
-import { DEFAULT_TEXT_STYLE, type Campaign, type WorkflowStep } from "@/lib/workspace/types";
+import type { Campaign } from "@/lib/workspace/types";
 import { useWorkspace } from "../workspace-context";
 
 function applyImport(
   result: TikTokImportResult,
   campaign: Campaign,
-  updateCampaign: (c: Campaign) => void,
-  setStep: (s: WorkflowStep) => void,
+  updateCampaign: (c: Campaign) => Promise<void>,
 ) {
-  updateCampaign({
+  const importedImages = result.slides
+    .map((s) => s.imageUrl)
+    .filter((u) => Boolean(u) && !isGradientPlaceholder(u));
+
+  return updateCampaign({
     ...campaign,
     name: result.title.slice(0, 48),
     sourceLabel: result.title,
-    slides: result.slides.map((s, i) => ({
-      id: `slide-${i}`,
-      order: i + 1,
-      imageUrl: s.imageUrl || placeholderUrl(i),
-      text: s.text,
-      textStyle: { ...DEFAULT_TEXT_STYLE },
-    })),
+    importedImages,
+    importedAsIs: true,
+    slides: createCleanSlots(),
     caption: result.caption,
     hashtags: result.hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)),
     status: "draft",
+    cleanedAt: undefined,
   });
-  setStep("editor");
 }
 
 export function SourcingStep() {
-  const { campaign, updateCampaign, setStep } = useWorkspace();
+  const { campaign, updateCampaign } = useWorkspace();
   const [tiktokUrl, setTiktokUrl] = useState("");
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [showExamples, setShowExamples] = useState(false);
 
+  const imported = campaign?.importedImages ?? [];
+
   async function importFromUrl() {
-    if (!campaign) return;
+    if (!campaign) {
+      setImportError("Crée d'abord une campagne dans Comptes.");
+      return;
+    }
     const url = tiktokUrl.trim();
     if (!url) return;
 
@@ -57,7 +63,7 @@ export function SourcingStep() {
       if (!res.ok) {
         throw new Error("error" in payload ? payload.error! : "Erreur");
       }
-      applyImport(payload as TikTokImportResult, campaign, updateCampaign, setStep);
+      await applyImport(payload as TikTokImportResult, campaign, updateCampaign);
     } catch (e) {
       setImportError(e instanceof Error ? e.message : "Erreur");
     } finally {
@@ -65,31 +71,37 @@ export function SourcingStep() {
     }
   }
 
-  function importMock(id: string) {
+  async function importMock(id: string) {
     if (!campaign) return;
     const item = MOCK_SOURCING_FEED.find((s) => s.id === id);
     if (!item) return;
-    applyImport(
-      {
-        title: item.title,
-        author: "",
-        caption: item.caption,
-        hashtags: item.hashtags,
-        sourceUrl: "",
-        slides: item.slides.map((s, i) => ({
-          imageUrl: placeholderUrl(i),
-          text: s.text,
-        })),
-      },
-      campaign,
-      updateCampaign,
-      setStep,
-    );
+    try {
+      await applyImport(
+        {
+          title: item.title,
+          author: "",
+          caption: item.caption,
+          hashtags: item.hashtags,
+          sourceUrl: "",
+          slides: item.slides.map((s, i) => ({
+            imageUrl: placeholderUrl(i),
+            text: s.text,
+          })),
+        },
+        campaign,
+        updateCampaign,
+      );
+    } catch (e) {
+      setImportError(e instanceof Error ? e.message : "Erreur");
+    }
   }
 
   return (
     <section className="k-card">
-      <h2 className="k-subheading">Importer un slideshow</h2>
+      <h2 className="k-subheading">Importer ton TikTok</h2>
+      <p className="mt-1 text-sm k-text-muted">
+        Télécharge → modifie avec ton IA → upload dans Clean
+      </p>
 
       <div className="mt-4 flex gap-2">
         <input
@@ -119,6 +131,60 @@ export function SourcingStep() {
         <p className="mt-2 text-xs text-red-500">{importError}</p>
       ) : null}
 
+      {imported.length > 0 ? (
+        <div className="mt-6">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="k-label">
+              {imported.length} slide{imported.length > 1 ? "s" : ""}
+              {campaign?.sourceLabel ? ` · ${campaign.sourceLabel}` : ""}
+            </p>
+            {campaign?.caption ? (
+              <button
+                type="button"
+                onClick={() =>
+                  downloadText(campaign.caption, "legende-tiktok.txt")
+                }
+                className="k-btn-ghost"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Légende
+              </button>
+            ) : null}
+          </div>
+
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+            {imported.map((url, i) => (
+              <li key={`${url.slice(0, 32)}-${i}`}>
+                <div
+                  className="relative aspect-[9/16] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-2)]"
+                  style={{
+                    backgroundImage: `url(${url})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }}
+                >
+                  <span className="absolute left-2 top-2 k-badge">{i + 1}</span>
+                </div>
+                {!isGradientPlaceholder(url) ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void downloadImageUrl(url, `slide-${i + 1}.jpg`).catch(() =>
+                        setImportError("Téléchargement impossible"),
+                      )
+                    }
+                    className="k-btn-secondary mt-2 w-full py-2 text-xs"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Télécharger
+                  </button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       <button
         type="button"
         onClick={() => setShowExamples((v) => !v)}
@@ -145,15 +211,6 @@ export function SourcingStep() {
           ))}
         </ul>
       ) : null}
-
-      <button
-        type="button"
-        onClick={() => setStep("editor")}
-        className="k-btn-ghost mt-4"
-      >
-        Passer
-        <ArrowRight className="h-3.5 w-3.5" />
-      </button>
     </section>
   );
 }

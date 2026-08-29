@@ -1,4 +1,9 @@
 import {
+  hydrateCampaignImages,
+  isDataImageUrl,
+  stripCampaignImages,
+} from "./image-store";
+import {
   DEFAULT_TEXT_STYLE,
   type Campaign,
   type CampaignSlide,
@@ -44,7 +49,19 @@ function readJson<T>(key: string, fallback: T): T {
 }
 
 function writeJson(key: string, value: unknown): void {
-  localStorage.setItem(key, JSON.stringify(value));
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    if (
+      error instanceof DOMException &&
+      (error.name === "QuotaExceededError" || error.code === 22)
+    ) {
+      throw new Error(
+        "Stockage navigateur plein — supprime une campagne ou vide le cache.",
+      );
+    }
+    throw error;
+  }
 }
 
 function defaultAccounts(): TikTokAccount[] {
@@ -61,7 +78,7 @@ function defaultAccounts(): TikTokAccount[] {
 }
 
 function emptySlides(): CampaignSlide[] {
-  return Array.from({ length: 5 }, (_, i) => ({
+  return Array.from({ length: 10 }, (_, i) => ({
     id: `slide-${i}`,
     order: i + 1,
     imageUrl: "",
@@ -80,6 +97,10 @@ export function createDefaultWorkspace(): Workspace {
   };
 }
 
+export function createCleanSlots(): CampaignSlide[] {
+  return emptySlides();
+}
+
 export function createDefaultCampaign(workspaceId: string, name = "Campagne 1"): Campaign {
   const now = new Date().toISOString();
   return {
@@ -92,6 +113,7 @@ export function createDefaultCampaign(workspaceId: string, name = "Campagne 1"):
     caption: "",
     hashtags: [],
     status: "draft",
+    accountMedia: {},
   };
 }
 
@@ -132,18 +154,90 @@ export function loadCampaigns(workspaceId: string): Campaign[] {
   return readJson<Campaign[]>(wsCampaignsKey(workspaceId), []);
 }
 
+export async function loadCampaignsHydrated(workspaceId: string): Promise<Campaign[]> {
+  const list = loadCampaigns(workspaceId);
+  return Promise.all(list.map((c) => hydrateCampaignImages(c)));
+}
+
 export function saveCampaigns(workspaceId: string, campaigns: Campaign[]): void {
   writeJson(wsCampaignsKey(workspaceId), campaigns);
 }
 
-export function upsertCampaign(workspaceId: string, campaign: Campaign): Campaign {
+/** Retire les data URLs éventuelles restantes (migration campagnes anciennes). */
+function compactCampaignForJson(campaign: Campaign): Campaign {
+  const stripUrl = (url: string) => (isDataImageUrl(url) ? "" : url);
+  const accountMedia: Record<string, string[]> = {};
+  if (campaign.accountMedia) {
+    for (const [id, urls] of Object.entries(campaign.accountMedia)) {
+      accountMedia[id] = urls.map(stripUrl);
+    }
+  }
+  return {
+    ...campaign,
+    importedImages: campaign.importedImages?.map(stripUrl),
+    accountMedia,
+    slides: campaign.slides.map((slide) => ({
+      ...slide,
+      imageUrl: stripUrl(slide.imageUrl),
+    })),
+  };
+}
+
+/** Purge les vieilles data URLs qui saturaient localStorage. */
+export function purgeLegacyCampaignBlobs(workspaceId: string): void {
+  const list = loadCampaigns(workspaceId);
+  let dirty = false;
+  const next = list.map((campaign) => {
+    const compacted = compactCampaignForJson(campaign);
+    if (JSON.stringify(compacted) !== JSON.stringify(campaign)) dirty = true;
+    return compacted;
+  });
+  if (dirty) {
+    try {
+      saveCampaigns(workspaceId, next);
+    } catch {
+      /* quota déjà plein — l'utilisateur devra vider manuellement */
+    }
+  }
+}
+
+export function deleteCampaign(workspaceId: string, campaignId: string): void {
+  const list = loadCampaigns(workspaceId).filter((c) => c.id !== campaignId);
+  saveCampaigns(workspaceId, list);
+  const active = getActiveCampaignId();
+  if (active === campaignId) {
+    const next = list[0]?.id ?? null;
+    if (next) setActiveCampaignId(next);
+    else localStorage.removeItem(ACTIVE_CAMPAIGN_KEY);
+  }
+}
+
+export function deleteWorkspace(workspaceId: string): void {
+  const list = loadWorkspaces().filter((w) => w.id !== workspaceId);
+  saveWorkspaces(list);
+  localStorage.removeItem(wsAccountsKey(workspaceId));
+  localStorage.removeItem(wsCampaignsKey(workspaceId));
+  localStorage.removeItem(wsScheduleKey(workspaceId));
+  localStorage.removeItem(wsMetricsKey(workspaceId));
+  const active = getActiveWorkspaceId();
+  if (active === workspaceId && list[0]) {
+    setActiveWorkspaceId(list[0].id);
+  }
+}
+
+export async function upsertCampaign(
+  workspaceId: string,
+  campaign: Campaign,
+): Promise<Campaign> {
+  const stripped = await stripCampaignImages(campaign);
+  const forJson = compactCampaignForJson(stripped);
   const list = loadCampaigns(workspaceId);
   const idx = list.findIndex((c) => c.id === campaign.id);
-  const next = { ...campaign, updatedAt: new Date().toISOString() };
-  if (idx >= 0) list[idx] = next;
-  else list.unshift(next);
+  const meta = { ...forJson, updatedAt: new Date().toISOString() };
+  if (idx >= 0) list[idx] = meta;
+  else list.unshift(meta);
   saveCampaigns(workspaceId, list);
-  return next;
+  return { ...campaign, updatedAt: meta.updatedAt };
 }
 
 export function loadAccounts(workspaceId: string): TikTokAccount[] {
@@ -181,7 +275,8 @@ export function bumpMetrics(workspaceId: string, accountId: string): void {
 
 export function getWorkflowStep(): import("./types").WorkflowStep {
   const step = readJson<string>(WORKFLOW_STEP_KEY, "sourcing");
-  const valid = ["sourcing", "editor", "clean", "schedule", "analytics"];
+  if (step === "editor") return "clean";
+  const valid = ["sourcing", "clean", "schedule", "analytics"];
   return (valid.includes(step) ? step : "sourcing") as import("./types").WorkflowStep;
 }
 

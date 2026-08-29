@@ -70,6 +70,37 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+async function imageUrlToJpegBlob(imageUrl: string): Promise<Blob> {
+  const res = await fetch(imageUrl);
+  const raw = await res.blob();
+  if (raw.type === "image/jpeg") return raw;
+
+  const img = await loadImage(imageUrl);
+  const canvas = document.createElement("canvas");
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas indisponible");
+  ctx.drawImage(img, 0, 0);
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((b) => (b ? resolve(b) : reject()), "image/jpeg", 0.92);
+  });
+}
+
+export async function slideToJpegBlob(
+  slide: CampaignSlide,
+  handle: string,
+  asIs: boolean,
+): Promise<Blob> {
+  if (asIs && slide.imageUrl && !isGradientPlaceholder(slide.imageUrl)) {
+    return imageUrlToJpegBlob(slide.imageUrl);
+  }
+  const canvas = await renderCampaignSlide(slide, handle);
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((b) => (b ? resolve(b) : reject()), "image/jpeg", 0.92);
+  });
+}
+
 export async function renderCampaignSlide(
   slide: CampaignSlide,
   handle: string,

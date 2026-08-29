@@ -3,21 +3,24 @@
 import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { SourcingStep } from "@/components/studio/steps/sourcing-step";
-import { EditorStep } from "@/components/studio/steps/editor-step";
 import { CleanStep } from "@/components/studio/steps/clean-step";
 import { ScheduleStep } from "@/components/studio/steps/schedule-step";
 import { AnalyticsStep } from "@/components/studio/steps/analytics-step";
-import { WorkspaceBar } from "@/components/studio/workspace-bar";
 import { useWorkspace } from "@/components/studio/workspace-context";
 import type { WorkflowStep } from "@/lib/workspace/types";
 
 const VALID_STEPS: WorkflowStep[] = [
   "sourcing",
-  "editor",
   "clean",
   "schedule",
   "analytics",
 ];
+
+function normalizeStep(raw: string | null): WorkflowStep | null {
+  if (!raw) return null;
+  if (raw === "editor") return "clean";
+  return VALID_STEPS.includes(raw as WorkflowStep) ? (raw as WorkflowStep) : null;
+}
 
 function StudioContentInner() {
   const { ready, step, setStep } = useWorkspace();
@@ -25,9 +28,8 @@ function StudioContentInner() {
 
   useEffect(() => {
     const param = searchParams.get("step");
-    if (param && VALID_STEPS.includes(param as WorkflowStep)) {
-      setStep(param as WorkflowStep);
-    }
+    const normalized = normalizeStep(param);
+    if (normalized) setStep(normalized);
   }, [searchParams, setStep]);
 
   if (!ready) {
@@ -40,10 +42,7 @@ function StudioContentInner() {
 
   return (
     <div className="k-page pb-10">
-      <WorkspaceBar />
-
       {step === "sourcing" ? <SourcingStep /> : null}
-      {step === "editor" ? <EditorStep /> : null}
       {step === "clean" ? <CleanStep /> : null}
       {step === "schedule" ? <ScheduleStep /> : null}
       {step === "analytics" ? <AnalyticsStep /> : null}

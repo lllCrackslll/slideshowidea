@@ -25,6 +25,8 @@ export type CampaignSlide = {
 
 export type CampaignStatus = "draft" | "ready" | "scheduled" | "published";
 
+export const CLEAN_SLOT_COUNT = 10;
+
 export type Campaign = {
   id: string;
   workspaceId: string;
@@ -32,6 +34,10 @@ export type Campaign = {
   createdAt: string;
   updatedAt: string;
   sourceLabel?: string;
+  importedAsIs?: boolean;
+  importedImages?: string[];
+  /** Images par compte TikTok (accountId → urls). */
+  accountMedia?: Record<string, string[]>;
   slides: CampaignSlide[];
   caption: string;
   hashtags: string[];
@@ -82,14 +88,26 @@ export const DEFAULT_TEXT_STYLE: SlideTextStyle = {
   y: 42,
 };
 
-export const WORKFLOW_STEPS: {
+export const WORKFLOW_MAIN_STEPS: {
   id: WorkflowStep;
   label: string;
   short: string;
 }[] = [
   { id: "sourcing", label: "Import", short: "1" },
-  { id: "editor", label: "Éditer", short: "2" },
-  { id: "clean", label: "Clean", short: "3" },
-  { id: "schedule", label: "Publier", short: "4" },
-  { id: "analytics", label: "Stats", short: "5" },
+  { id: "clean", label: "Clean", short: "2" },
+  { id: "schedule", label: "Publier", short: "3" },
+];
+
+export const WORKFLOW_STATS_STEP = {
+  id: "analytics" as const,
+  label: "Stats",
+};
+
+export const WORKFLOW_STEPS: {
+  id: WorkflowStep;
+  label: string;
+  short: string;
+}[] = [
+  ...WORKFLOW_MAIN_STEPS,
+  { id: WORKFLOW_STATS_STEP.id, label: WORKFLOW_STATS_STEP.label, short: "4" },
 ];
