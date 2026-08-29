@@ -124,6 +124,34 @@ async function publishVideoToAccount(params: {
   return { ok: res.ok && Boolean(payload.ok), ...payload };
 }
 
+async function publishPhotosToAccount(params: {
+  workspaceId: string;
+  accountId: string;
+  imageUrls: string[];
+  caption: string;
+}) {
+  const blobs = await Promise.all(params.imageUrls.map((url) => urlToBlob(url)));
+  const form = new FormData();
+  form.set("workspaceId", params.workspaceId);
+  form.set("accountId", params.accountId);
+  form.set("caption", params.caption);
+  blobs.forEach((blob, i) => {
+    form.append("images", blob, `slide-${i + 1}.jpg`);
+  });
+
+  const res = await fetch("/api/tiktok/publish-photos", {
+    method: "POST",
+    body: form,
+  });
+  const payload = (await res.json()) as {
+    ok?: boolean;
+    publishId?: string;
+    mode?: "direct" | "inbox";
+    error?: string;
+  };
+  return { ok: res.ok && Boolean(payload.ok), ...payload };
+}
+
 export function ScheduleStep() {
   const { workspace, campaign, accounts, updateCampaign, setStep } = useWorkspace();
   const [exporting, setExporting] = useState(false);
@@ -295,8 +323,8 @@ export function ScheduleStep() {
       return;
     }
 
-    if (format === "video" && targets.some((acc) => acc.status !== "connected")) {
-      setMsg("Connecte tous les comptes avec vidéo dans Comptes avant de publier.");
+    if (targets.some((acc) => acc.status !== "connected")) {
+      setMsg("Connecte tous les comptes avec contenu dans Comptes avant de publier.");
       return;
     }
 
@@ -340,6 +368,13 @@ export function ScheduleStep() {
             nextCampaign = setAccountFiles(nextCampaign, acc.id, [], "video");
           }
         } else {
+          const apiResult = await publishPhotosToAccount({
+            workspaceId: ws.id,
+            accountId: acc.id,
+            imageUrls: files,
+            caption: postCaption,
+          });
+
           results.push({
             id: postId,
             campaignId: c.id,
@@ -348,9 +383,15 @@ export function ScheduleStep() {
             scheduledAt: now,
             format,
             caption: postCaption,
-            status: "simulated",
-            errorMessage: "Carrousel : exporte le ZIP en attendant l’API photo TikTok.",
+            tiktokPublishId: apiResult.publishId,
+            errorMessage: apiResult.error,
+            status: apiResult.ok ? "published" : "failed",
           });
+
+          if (apiResult.ok) {
+            bumpMetrics(ws.id, acc.id);
+            nextCampaign = setAccountFiles(nextCampaign, acc.id, [], "carousel");
+          }
         }
       }
 
@@ -362,7 +403,7 @@ export function ScheduleStep() {
       const okCount = results.filter((post) => post.status === "published").length;
       const failCount = results.filter((post) => post.status === "failed").length;
       if (okCount && !failCount) {
-        setMsg(`${okCount} vidéo${okCount > 1 ? "s" : ""} envoyée${okCount > 1 ? "s" : ""} sur TikTok.`);
+        setMsg(`${okCount} publication${okCount > 1 ? "s" : ""} envoyée${okCount > 1 ? "s" : ""} sur TikTok.`);
       } else if (failCount) {
         setMsg(`${okCount} réussie(s), ${failCount} échec(s) — voir le détail ci-dessous.`);
       }
