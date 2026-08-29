@@ -177,7 +177,7 @@ export function ScheduleStep() {
     saveSchedule(ws.id, [...loadSchedule(ws.id), ...posts]);
     await updateCampaign({ ...c, status: "scheduled" });
     posts.forEach((p) => bumpMetrics(ws.id, p.accountId));
-    setMsg(`${posts.length} posts programmés`);
+    setMsg(`${posts.length} publication${posts.length > 1 ? "s" : ""} lancée${posts.length > 1 ? "s" : ""}`);
   }
 
   const filledAccounts = accounts.filter((a) =>
@@ -324,7 +324,7 @@ export function ScheduleStep() {
           className="k-btn-accent flex-1"
         >
           <Send className="h-4 w-4" />
-          Programmer
+          Publier
         </button>
       </div>
 
