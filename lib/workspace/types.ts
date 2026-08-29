@@ -77,7 +77,9 @@ export type ScheduledPost = {
   scheduledAt: string;
   format?: PublishFormat;
   caption?: string;
-  status: "queued" | "simulated" | "published";
+  tiktokPublishId?: string;
+  errorMessage?: string;
+  status: "queued" | "simulated" | "published" | "failed";
 };
 
 export type AccountMetrics = {

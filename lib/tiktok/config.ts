@@ -1,4 +1,4 @@
-const DEFAULT_SCOPES = ["user.info.basic", "video.upload"] as const;
+const DEFAULT_SCOPES = ["user.info.basic", "video.upload", "video.publish"] as const;
 
 export function getTikTokConfig() {
   const clientKey = process.env.TIKTOK_CLIENT_KEY?.trim();

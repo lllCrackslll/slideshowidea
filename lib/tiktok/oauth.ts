@@ -51,6 +51,27 @@ export async function exchangeCodeForToken(code: string): Promise<TikTokTokenRes
   return (await res.json()) as TikTokTokenResponse;
 }
 
+export async function refreshAccessToken(refreshToken: string): Promise<TikTokTokenResponse> {
+  const config = getTikTokConfig();
+  if (!config) throw new Error("TikTok non configuré.");
+
+  const body = new URLSearchParams({
+    client_key: config.clientKey,
+    client_secret: config.clientSecret,
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+  });
+
+  const res = await fetch(config.tokenUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+    cache: "no-store",
+  });
+
+  return (await res.json()) as TikTokTokenResponse;
+}
+
 export async function fetchTikTokUserInfo(
   accessToken: string,
 ): Promise<TikTokUserInfo | null> {

@@ -295,6 +295,24 @@ export function saveSchedule(workspaceId: string, posts: ScheduledPost[]): void 
   writeJson(wsScheduleKey(workspaceId), posts);
 }
 
+export function removeScheduledPost(
+  workspaceId: string,
+  postId: string,
+): ScheduledPost[] {
+  const next = loadSchedule(workspaceId).filter((post) => post.id !== postId);
+  saveSchedule(workspaceId, next);
+  return next;
+}
+
+export function clearCampaignSchedule(
+  workspaceId: string,
+  campaignId: string,
+): ScheduledPost[] {
+  const next = loadSchedule(workspaceId).filter((post) => post.campaignId !== campaignId);
+  saveSchedule(workspaceId, next);
+  return next;
+}
+
 export function loadMetrics(workspaceId: string): Record<string, { views: number; likes: number; engagementRate: number; promoUses: number }> {
   return readJson(wsMetricsKey(workspaceId), {});
 }

@@ -9,6 +9,7 @@ import {
   Package,
   Plus,
   Send,
+  Trash2,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -17,6 +18,7 @@ import { fileToDataUrl } from "@/lib/workspace/image-utils";
 import {
   bumpMetrics,
   loadSchedule,
+  removeScheduledPost,
   saveSchedule,
 } from "@/lib/workspace/storage";
 import type { Campaign, PublishFormat, ScheduledPost } from "@/lib/workspace/types";
@@ -85,14 +87,41 @@ function formatWhen(iso: string) {
   });
 }
 
-function statusLabel(status: ScheduledPost["status"]) {
-  if (status === "published") return "Publié sur TikTok";
-  if (status === "simulated") return "Simulé (local)";
+function statusLabel(post: ScheduledPost) {
+  if (post.status === "published") return "Publié sur TikTok";
+  if (post.status === "failed") return "Échec";
+  if (post.status === "simulated") return "Simulé (local)";
   return "En file";
 }
 
 function buildCaptionText(caption: string, promoCode?: string) {
   return [caption.trim(), promoCode ? `Code: ${promoCode}` : ""].filter(Boolean).join("\n");
+}
+
+async function publishVideoToAccount(params: {
+  workspaceId: string;
+  accountId: string;
+  videoUrl: string;
+  caption: string;
+}) {
+  const blob = await urlToBlob(params.videoUrl);
+  const form = new FormData();
+  form.set("workspaceId", params.workspaceId);
+  form.set("accountId", params.accountId);
+  form.set("caption", params.caption);
+  form.set("video", blob, blob.type.includes("webm") ? "video.webm" : "video.mp4");
+
+  const res = await fetch("/api/tiktok/publish", {
+    method: "POST",
+    body: form,
+  });
+  const payload = (await res.json()) as {
+    ok?: boolean;
+    publishId?: string;
+    mode?: "direct" | "inbox";
+    error?: string;
+  };
+  return { ok: res.ok && Boolean(payload.ok), ...payload };
 }
 
 export function ScheduleStep() {
@@ -116,14 +145,24 @@ export function ScheduleStep() {
     setLastBatch([]);
   }, [campaignId]);
 
-  const recentPosts = useMemo(() => {
+  const campaignPosts = useMemo(() => {
     if (!workspaceId || !campaignId) return [];
     void scheduleTick;
     return loadSchedule(workspaceId)
       .filter((post) => post.campaignId === campaignId)
-      .slice(-12)
+      .slice()
       .reverse();
   }, [workspaceId, campaignId, scheduleTick]);
+
+  const queuedPosts = useMemo(
+    () => campaignPosts.filter((post) => post.status === "queued" || post.status === "simulated"),
+    [campaignPosts],
+  );
+
+  const historyPosts = useMemo(
+    () => campaignPosts.filter((post) => post.status === "published" || post.status === "failed"),
+    [campaignPosts],
+  );
 
   if (!workspace) return null;
 
@@ -138,6 +177,33 @@ export function ScheduleStep() {
   const c = campaign;
   const ws = workspace;
   const publishAsVideo = c.publishFormat === "video";
+
+  function refreshSchedule() {
+    setScheduleTick((n) => n + 1);
+  }
+
+  function deleteQueuedPost(postId: string) {
+    if (!workspaceId) return;
+    removeScheduledPost(workspaceId, postId);
+    if (lastBatch.some((post) => post.id === postId)) {
+      setLastBatch((batch) => batch.filter((post) => post.id !== postId));
+    }
+    refreshSchedule();
+  }
+
+  function clearQueue() {
+    if (!workspaceId || !campaignId) return;
+    if (!queuedPosts.length) return;
+    if (!window.confirm(`Supprimer ${queuedPosts.length} élément(s) en file ?`)) return;
+    const remaining = loadSchedule(workspaceId).filter(
+      (post) =>
+        post.campaignId !== campaignId ||
+        (post.status !== "queued" && post.status !== "simulated"),
+    );
+    saveSchedule(workspaceId, remaining);
+    setLastBatch((batch) => batch.filter((post) => post.status === "published" || post.status === "failed"));
+    refreshSchedule();
+  }
 
   async function setPublishFormat(format: PublishFormat) {
     await updateCampaign({ ...c, publishFormat: format });
@@ -222,44 +288,86 @@ export function ScheduleStep() {
       .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`));
 
     const fullCaption = [caption.trim(), hashtags.join(" ")].filter(Boolean).join("\n");
-    const posts: ScheduledPost[] = [];
+    const targets = accounts.filter((acc) => getAccountFiles(c, acc.id, format).length > 0);
 
-    accounts.forEach((acc, i) => {
-      if (!getAccountFiles(c, acc.id, format).length) return;
-      const d = new Date();
-      d.setHours(acc.publishHour, acc.publishMinute + i * 30, 0, 0);
-      const isConnected = acc.status === "connected";
-      posts.push({
-        id: `post-${Date.now()}-${i}`,
-        campaignId: c.id,
-        accountId: acc.id,
-        accountLabel: acc.label,
-        scheduledAt: d.toISOString(),
-        format,
-        caption: buildCaptionText(fullCaption, acc.promoCode),
-        status: isConnected ? "simulated" : "simulated",
-      });
-    });
-
-    if (!posts.length) {
+    if (!targets.length) {
       setMsg(publishAsVideo ? "Ajoute une vidéo par compte" : "Ajoute des images par compte");
+      return;
+    }
+
+    if (format === "video" && targets.some((acc) => acc.status !== "connected")) {
+      setMsg("Connecte tous les comptes avec vidéo dans Comptes avant de publier.");
       return;
     }
 
     setPublishing(true);
     setMsg(null);
 
+    const now = new Date().toISOString();
+    const results: ScheduledPost[] = [];
+    let nextCampaign: Campaign = { ...c, caption: caption.trim(), hashtags, status: "published" };
+
     try {
-      saveSchedule(ws.id, [...loadSchedule(ws.id), ...posts]);
-      await updateCampaign({
-        ...c,
-        caption: caption.trim(),
-        hashtags,
-        status: "published",
-      });
-      posts.forEach((p) => bumpMetrics(ws.id, p.accountId));
-      setLastBatch(posts);
-      setScheduleTick((n) => n + 1);
+      for (let i = 0; i < targets.length; i += 1) {
+        const acc = targets[i];
+        const postCaption = buildCaptionText(fullCaption, acc.promoCode);
+        const postId = `post-${Date.now()}-${i}`;
+        const files = getAccountFiles(c, acc.id, format);
+
+        if (format === "video") {
+          const apiResult = await publishVideoToAccount({
+            workspaceId: ws.id,
+            accountId: acc.id,
+            videoUrl: files[0],
+            caption: postCaption,
+          });
+
+          results.push({
+            id: postId,
+            campaignId: c.id,
+            accountId: acc.id,
+            accountLabel: acc.label,
+            scheduledAt: now,
+            format,
+            caption: postCaption,
+            tiktokPublishId: apiResult.publishId,
+            errorMessage: apiResult.error,
+            status: apiResult.ok ? "published" : "failed",
+          });
+
+          if (apiResult.ok) {
+            bumpMetrics(ws.id, acc.id);
+            nextCampaign = setAccountFiles(nextCampaign, acc.id, [], "video");
+          }
+        } else {
+          results.push({
+            id: postId,
+            campaignId: c.id,
+            accountId: acc.id,
+            accountLabel: acc.label,
+            scheduledAt: now,
+            format,
+            caption: postCaption,
+            status: "simulated",
+            errorMessage: "Carrousel : exporte le ZIP en attendant l’API photo TikTok.",
+          });
+        }
+      }
+
+      saveSchedule(ws.id, [...loadSchedule(ws.id), ...results]);
+      await updateCampaign(nextCampaign);
+      setLastBatch(results);
+      refreshSchedule();
+
+      const okCount = results.filter((post) => post.status === "published").length;
+      const failCount = results.filter((post) => post.status === "failed").length;
+      if (okCount && !failCount) {
+        setMsg(`${okCount} vidéo${okCount > 1 ? "s" : ""} envoyée${okCount > 1 ? "s" : ""} sur TikTok.`);
+      } else if (failCount) {
+        setMsg(`${okCount} réussie(s), ${failCount} échec(s) — voir le détail ci-dessous.`);
+      }
+    } catch {
+      setMsg("Erreur lors de la publication.");
     } finally {
       setPublishing(false);
     }
@@ -269,13 +377,83 @@ export function ScheduleStep() {
     getAccountFiles(c, a.id, publishAsVideo ? "video" : "carousel").length > 0,
   ).length;
 
-  const displayPosts = lastBatch.length > 0 ? lastBatch : recentPosts.slice(0, 6);
+  const displayPosts = lastBatch.length > 0 ? lastBatch : historyPosts.slice(0, 6);
+
+  function renderPostList(
+    posts: ScheduledPost[],
+    options?: { showDelete?: boolean; title: string; empty?: string },
+  ) {
+    if (!posts.length) {
+      return options?.empty ? (
+        <p className="text-xs k-text-muted">{options.empty}</p>
+      ) : null;
+    }
+
+    return (
+      <>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 k-accent" />
+            <h3 className="text-sm font-medium k-text">{options?.title}</h3>
+          </div>
+          {options?.showDelete && posts.length ? (
+            <button type="button" onClick={clearQueue} className="k-btn-ghost py-1 text-xs text-red-500">
+              <Trash2 className="h-3.5 w-3.5" />
+              Vider la file
+            </button>
+          ) : null}
+        </div>
+        <ul className="space-y-3">
+          {posts.map((post) => {
+            const acc = accounts.find((a) => a.id === post.accountId);
+            return (
+              <li
+                key={post.id}
+                className="rounded-lg border border-[var(--border)] bg-[var(--surface-1)] p-3"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-medium k-text">
+                    {post.accountLabel ?? acc?.label ?? post.accountId}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="k-badge">{statusLabel(post)}</span>
+                    {options?.showDelete ? (
+                      <button
+                        type="button"
+                        onClick={() => deleteQueuedPost(post.id)}
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-red-500 hover:bg-red-500/10"
+                        title="Supprimer de la file"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+                <p className="mt-1 flex items-center gap-1 text-[10px] k-text-muted">
+                  <Clock className="h-3 w-3" />
+                  {formatWhen(post.scheduledAt)} · {post.format === "video" ? "Vidéo" : "Carrousel"}
+                </p>
+                {post.caption ? (
+                  <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-xs k-text-secondary">
+                    {post.caption}
+                  </p>
+                ) : null}
+                {post.errorMessage ? (
+                  <p className="mt-2 text-xs text-red-500">{post.errorMessage}</p>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      </>
+    );
+  }
 
   return (
     <section className="k-card">
       <h2 className="k-subheading">Publier</h2>
       <p className="mt-1 text-sm k-text-muted">
-        Carrousel ou vidéo · un pack par compte
+        Publication immédiate · carrousel ou vidéo
       </p>
 
       <div className="mt-4 max-w-sm">
@@ -283,9 +461,8 @@ export function ScheduleStep() {
       </div>
 
       <div className="k-callout mt-4 text-xs leading-relaxed k-text-secondary">
-        La publication TikTok réelle arrive après approbation API. Pour l&apos;instant, tu
-        prépares le contenu ici — le bouton Publier enregistre la file et affiche le récap
-        par compte.
+        Le bouton <strong>Publier</strong> envoie tout de suite sur TikTok les vidéos des comptes
+        connectés. Sans connexion TikTok, la publication vidéo est bloquée.
       </div>
 
       <div className="k-row mt-4 space-y-3">
@@ -315,9 +492,7 @@ export function ScheduleStep() {
             onChange={(e) => setMusicConsent(e.target.checked)}
             className="mt-0.5 h-4 w-4 accent-[var(--accent)]"
           />
-          <span>
-            By posting, you agree to TikTok&apos;s Music Usage Confirmation.
-          </span>
+          <span>By posting, you agree to TikTok&apos;s Music Usage Confirmation.</span>
         </label>
       </div>
 
@@ -358,8 +533,7 @@ export function ScheduleStep() {
                   <div>
                     <p className="text-sm font-medium k-text">{acc.label}</p>
                     <p className="text-[10px] k-text-muted">
-                      {acc.status === "connected" ? "TikTok connecté" : "Non connecté"} ·{" "}
-                      {acc.publishHour}h{String(acc.publishMinute).padStart(2, "0")}
+                      {acc.status === "connected" ? "TikTok connecté" : "Non connecté — requis pour vidéo"}
                     </p>
                   </div>
                   <button
@@ -460,47 +634,34 @@ export function ScheduleStep() {
           ) : (
             <Send className="h-4 w-4" />
           )}
-          Publier
+          {publishing ? "Publication…" : "Publier maintenant"}
         </button>
       </div>
 
-      {msg ? <p className="mt-3 text-center text-xs text-red-500">{msg}</p> : null}
+      {msg ? (
+        <p
+          className={`mt-3 text-center text-xs ${msg.includes("échec") || msg.includes("Erreur") || msg.includes("Connecte") || msg.includes("Ajoute") || msg.includes("Coche") ? "text-red-500" : "k-accent"}`}
+        >
+          {msg}
+        </p>
+      ) : null}
+
+      {queuedPosts.length ? (
+        <section className="k-card-flat mt-6">
+          {renderPostList(queuedPosts, {
+            showDelete: true,
+            title: `File d'attente (${queuedPosts.length})`,
+          })}
+        </section>
+      ) : null}
 
       {displayPosts.length ? (
         <section className="k-card-flat mt-6">
-          <div className="mb-3 flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 k-accent" />
-            <h3 className="text-sm font-medium k-text">
-              {lastBatch.length
-                ? `${lastBatch.length} publication${lastBatch.length > 1 ? "s" : ""} enregistrée${lastBatch.length > 1 ? "s" : ""}`
-                : "Publications récentes"}
-            </h3>
-          </div>
-          <ul className="space-y-3">
-            {displayPosts.map((post) => {
-              const acc = accounts.find((a) => a.id === post.accountId);
-              return (
-                <li key={post.id} className="rounded-lg border border-[var(--border)] bg-[var(--surface-1)] p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-medium k-text">
-                      {post.accountLabel ?? acc?.label ?? post.accountId}
-                    </p>
-                    <span className="k-badge">{statusLabel(post.status)}</span>
-                  </div>
-                  <p className="mt-1 flex items-center gap-1 text-[10px] k-text-muted">
-                    <Clock className="h-3 w-3" />
-                    {formatWhen(post.scheduledAt)} ·{" "}
-                    {post.format === "video" ? "Vidéo" : "Carrousel"}
-                  </p>
-                  {post.caption ? (
-                    <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-xs k-text-secondary">
-                      {post.caption}
-                    </p>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
+          {renderPostList(displayPosts, {
+            title: lastBatch.length
+              ? `${lastBatch.length} publication${lastBatch.length > 1 ? "s" : ""} à l'instant`
+              : "Historique récent",
+          })}
         </section>
       ) : null}
 
