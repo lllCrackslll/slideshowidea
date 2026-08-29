@@ -313,22 +313,6 @@ export function clearCampaignSchedule(
   return next;
 }
 
-export function loadMetrics(workspaceId: string): Record<string, { views: number; likes: number; engagementRate: number; promoUses: number }> {
-  return readJson(wsMetricsKey(workspaceId), {});
-}
-
-export function bumpMetrics(workspaceId: string, accountId: string): void {
-  const all = loadMetrics(workspaceId);
-  const cur = all[accountId] ?? { views: 0, likes: 0, engagementRate: 0, promoUses: 0 };
-  all[accountId] = {
-    views: cur.views + Math.floor(800 + Math.random() * 4200),
-    likes: cur.likes + Math.floor(40 + Math.random() * 180),
-    engagementRate: Number((3.5 + Math.random() * 4).toFixed(1)),
-    promoUses: cur.promoUses + (Math.random() > 0.6 ? 1 : 0),
-  };
-  writeJson(wsMetricsKey(workspaceId), all);
-}
-
 export function getWorkflowStep(): import("./types").WorkflowStep {
   const step = readJson<string>(WORKFLOW_STEP_KEY, "sourcing");
   if (step === "editor") return "clean";

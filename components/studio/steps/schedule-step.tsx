@@ -16,7 +16,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import JSZip from "jszip";
 import { fileToDataUrl } from "@/lib/workspace/image-utils";
 import {
-  bumpMetrics,
   loadSchedule,
   removeScheduledPost,
   saveSchedule,
@@ -382,7 +381,6 @@ export function ScheduleStep() {
           });
 
           if (apiResult.ok) {
-            bumpMetrics(ws.id, acc.id);
             nextCampaign = setAccountFiles(nextCampaign, acc.id, [], "video");
           }
         } else {
@@ -408,7 +406,6 @@ export function ScheduleStep() {
           });
 
           if (apiResult.ok) {
-            bumpMetrics(ws.id, acc.id);
             nextCampaign = setAccountFiles(nextCampaign, acc.id, [], "carousel");
           }
         }
