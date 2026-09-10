@@ -1,7 +1,8 @@
 "use client";
 
-import { Loader2, Plus, ShieldCheck, X } from "lucide-react";
+import { Download, Loader2, Plus, ShieldCheck, X } from "lucide-react";
 import { useRef, useState } from "react";
+import { downloadSlidesZip } from "@/lib/workspace/export-slides";
 import { fileToDataUrl } from "@/lib/workspace/image-utils";
 import { cleanAllSlides } from "@/lib/workspace/slide-clean";
 import type { Campaign } from "@/lib/workspace/types";
@@ -28,6 +29,8 @@ function setAccountImages(
 export function CleanStep() {
   const { campaign, accounts, updateCampaign } = useWorkspace();
   const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
   const [done, setDone] = useState(Boolean(campaign?.cleanedAt));
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -75,12 +78,36 @@ export function CleanStep() {
         cleanedAt: new Date().toISOString(),
       });
       setDone(true);
+      setMsg(null);
     } finally {
       setBusy(false);
     }
   }
 
+  async function downloadSlides() {
+    setExporting(true);
+    setMsg(null);
+    try {
+      const exported = await downloadSlidesZip({
+        campaignName: c.name,
+        caption: [c.caption, c.hashtags?.join(" ")].filter(Boolean).join("\n"),
+        accounts,
+        getImages: (accountId) => getAccountImages(c, accountId),
+      });
+      if (!exported) {
+        setMsg("Aucune slide à télécharger.");
+        return;
+      }
+      setMsg(`${exported} compte${exported > 1 ? "s" : ""} téléchargé${exported > 1 ? "s" : ""}.`);
+    } catch {
+      setMsg("Erreur lors du téléchargement.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const filledAccounts = accounts.filter((a) => getAccountImages(c, a.id).length > 0).length;
+  const canDownload = filledAccounts > 0 && Boolean(c.cleanedAt);
 
   return (
       <section className="k-card">
@@ -167,21 +194,44 @@ export function CleanStep() {
           {filledAccounts}/{accounts.length} comptes remplis
         </p>
 
-        <button
-          type="button"
-          disabled={busy || filledAccounts === 0}
-          onClick={() => void runClean()}
-          className="k-btn-primary mx-auto mt-4 flex sm:min-w-[220px]"
-        >
-          {busy ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <ShieldCheck className="h-4 w-4" />
-          )}
-          {done ? "Re-clean" : "Lancer le clean"}
-        </button>
+        <div className="mx-auto mt-4 flex w-full max-w-md flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            disabled={busy || filledAccounts === 0}
+            onClick={() => void runClean()}
+            className="k-btn-primary flex-1"
+          >
+            {busy ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ShieldCheck className="h-4 w-4" />
+            )}
+            {done ? "Re-clean" : "Lancer le clean"}
+          </button>
+          <button
+            type="button"
+            disabled={exporting || !canDownload}
+            onClick={() => void downloadSlides()}
+            className="k-btn-accent flex-1"
+          >
+            {exporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            Télécharger ZIP
+          </button>
+        </div>
 
         {done ? <p className="mt-3 text-center text-xs k-accent">Clean terminé</p> : null}
+        {msg ? (
+          <p className={`mt-2 text-center text-xs ${msg.includes("Erreur") || msg.includes("Aucune") ? "text-red-500" : "k-accent"}`}>
+            {msg}
+          </p>
+        ) : null}
+        {!canDownload && filledAccounts > 0 ? (
+          <p className="mt-2 text-center text-xs k-text-muted">Lance le clean pour activer le téléchargement.</p>
+        ) : null}
       </section>
   );
 }
