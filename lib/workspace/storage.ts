@@ -106,6 +106,8 @@ export function createDefaultCampaign(workspaceId: string, name = "Campagne 1"):
     status: "draft",
     accountMedia: {},
     accountVideos: {},
+    mediaUrls: [],
+    mediaVideos: [],
     publishFormat: "carousel",
   };
 }

@@ -38,9 +38,13 @@ export type Campaign = {
   sourceLabel?: string;
   importedAsIs?: boolean;
   importedImages?: string[];
-  /** Images par compte TikTok (accountId → urls). */
+  /** Slides nettoyées (carrousel). */
+  mediaUrls?: string[];
+  /** Vidéos préparées. */
+  mediaVideos?: string[];
+  /** @deprecated ancien modèle multi-comptes */
   accountMedia?: Record<string, string[]>;
-  /** Vidéos par compte (mode publication vidéo). */
+  /** @deprecated ancien modèle multi-comptes */
   accountVideos?: Record<string, string[]>;
   publishFormat?: PublishFormat;
   slides: CampaignSlide[];
@@ -105,7 +109,7 @@ export const WORKFLOW_MAIN_STEPS: {
 }[] = [
   { id: "sourcing", label: "Import", short: "1" },
   { id: "clean", label: "Clean", short: "2" },
-  { id: "schedule", label: "Publier", short: "3" },
+  { id: "schedule", label: "Exporter", short: "3" },
 ];
 
 export const WORKFLOW_STATS_STEP = {

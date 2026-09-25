@@ -1,5 +1,5 @@
-import { StudioApp } from "@/components/studio/studio-app";
+import { ToolsHome } from "@/components/shell/tools-home";
 
 export default function HomePage() {
-  return <StudioApp />;
+  return <ToolsHome />;
 }

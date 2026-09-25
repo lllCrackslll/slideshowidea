@@ -6,7 +6,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "carrousels.studio",
   description:
-    "Génère et distribue des carrousels TikTok sur plusieurs comptes — pack multi-comptes, planning et outils image.",
+    "Outils image et vidéo pour créer des variantes uniques — repurpose, conversion, compression et spoofer.",
   icons: {
     icon: [{ url: "/icon.png", type: "image/png", sizes: "192x192" }],
     apple: [{ url: "/apple-icon.png", type: "image/png", sizes: "180x180" }],

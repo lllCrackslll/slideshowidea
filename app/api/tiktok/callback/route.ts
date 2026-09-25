@@ -8,7 +8,7 @@ import {
 import { saveTikTokConnection } from "@/lib/tiktok/token-store";
 
 function redirectToSetup(params: Record<string, string>, origin: string) {
-  const url = new URL("/setup", origin);
+  const url = new URL("/", origin);
   for (const [key, value] of Object.entries(params)) {
     url.searchParams.set(key, value);
   }

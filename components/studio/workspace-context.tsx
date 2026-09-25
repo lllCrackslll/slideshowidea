@@ -13,27 +13,18 @@ import {
   createDefaultCampaign,
   createDefaultWorkspace,
   deleteWorkspace as removeWorkspace,
-  ensureWorkspaceCampaign,
-  getActiveCampaignId,
   getActiveWorkspaceId,
   getWorkflowStep,
-  purgeLegacyCampaignBlobs,
-  loadAccounts,
   loadCampaignsHydrated,
   loadWorkspaces,
-  saveAccounts,
+  purgeLegacyCampaignBlobs,
   saveWorkspaces,
   setActiveCampaignId,
   setActiveWorkspaceId,
   setWorkflowStep,
   upsertCampaign,
 } from "@/lib/workspace/storage";
-import type {
-  Campaign,
-  TikTokAccount,
-  WorkflowStep,
-  Workspace,
-} from "@/lib/workspace/types";
+import type { Campaign, WorkflowStep, Workspace } from "@/lib/workspace/types";
 
 function resolveActiveWorkspaceId(wsList: Workspace[]): string | null {
   const stored = getActiveWorkspaceId();
@@ -46,17 +37,13 @@ type WorkspaceContextValue = {
   workspaces: Workspace[];
   workspace: Workspace | null;
   campaign: Campaign | null;
-  accounts: TikTokAccount[];
   step: WorkflowStep;
   setStep: (step: WorkflowStep) => void;
-  /** Choisir une campagne (= app). */
   selectApp: (id: string) => void;
   addApp: (name: string) => void;
   updateApp: (partial: Partial<Workspace>) => void;
   deleteApp: (id: string) => void;
   updateCampaign: (campaign: Campaign) => Promise<void>;
-  updateAccounts: (accounts: TikTokAccount[]) => void;
-  /** Campagne active + au moins un compte TikTok. */
   studioReady: boolean;
 };
 
@@ -67,33 +54,33 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [accounts, setAccounts] = useState<TikTokAccount[]>([]);
   const [step, setStepState] = useState<WorkflowStep>("sourcing");
 
   const loadApp = useCallback(async (id: string) => {
     const camps = await loadCampaignsHydrated(id);
     const camp = camps.find((c) => c.id === id) ?? camps[0] ?? null;
     setCampaign(camp);
-    if (camp) {
-      setActiveCampaignId(camp.id);
-    }
+    if (camp) setActiveCampaignId(camp.id);
   }, []);
 
   useEffect(() => {
     async function boot() {
-      const wsList = loadWorkspaces();
+      let wsList = loadWorkspaces();
+      if (!wsList.length) {
+        const ws = createDefaultWorkspace();
+        wsList = [ws];
+        saveWorkspaces(wsList);
+        await upsertCampaign(ws.id, createDefaultCampaign(ws.id, ws.name));
+      }
+
       const activeWs = resolveActiveWorkspaceId(wsList);
       if (activeWs) purgeLegacyCampaignBlobs(activeWs);
 
       setWorkspaces(wsList);
       setWorkspaceId(activeWs);
-      if (activeWs) {
-        setAccounts(loadAccounts(activeWs));
-        await loadApp(activeWs);
-      } else {
-        setCampaign(null);
-        setAccounts([]);
-      }
+      if (activeWs) await loadApp(activeWs);
+      else setCampaign(null);
+
       setStepState(getWorkflowStep());
       setReady(true);
     }
@@ -106,8 +93,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   const studioReady = useMemo(
-    () => Boolean(workspace && campaign && accounts.length > 0),
-    [workspace, campaign, accounts.length],
+    () => Boolean(workspace && campaign),
+    [workspace, campaign],
   );
 
   const setStep = useCallback((next: WorkflowStep) => {
@@ -119,7 +106,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     (id: string) => {
       setActiveWorkspaceId(id);
       setWorkspaceId(id);
-      setAccounts(loadAccounts(id));
       void loadApp(id);
     },
     [loadApp],
@@ -134,10 +120,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const next = [...workspaces, ws];
       saveWorkspaces(next);
       setWorkspaces(next);
-      saveAccounts(ws.id, []);
 
-      const camp = createDefaultCampaign(ws.id, ws.name);
-      void upsertCampaign(ws.id, camp).then(() => {
+      void upsertCampaign(ws.id, createDefaultCampaign(ws.id, ws.name)).then(() => {
         selectApp(ws.id);
       });
     },
@@ -168,13 +152,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setWorkspaces(wsList);
       const activeWs = resolveActiveWorkspaceId(wsList);
       setWorkspaceId(activeWs);
-      if (activeWs) {
-        setAccounts(loadAccounts(activeWs));
-        void loadApp(activeWs);
-      } else {
-        setCampaign(null);
-        setAccounts([]);
-      }
+      if (activeWs) void loadApp(activeWs);
+      else setCampaign(null);
     },
     [loadApp],
   );
@@ -182,22 +161,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const updateCampaign = useCallback(
     async (updated: Campaign) => {
       if (!workspaceId) return;
-      try {
-        const saved = await upsertCampaign(workspaceId, updated);
-        setCampaign(saved);
-      } catch (error) {
-        console.error("[workspace] save campaign", error);
-        throw error;
-      }
-    },
-    [workspaceId],
-  );
-
-  const updateAccounts = useCallback(
-    (next: TikTokAccount[]) => {
-      if (!workspaceId) return;
-      saveAccounts(workspaceId, next);
-      setAccounts(next);
+      const saved = await upsertCampaign(workspaceId, updated);
+      setCampaign(saved);
     },
     [workspaceId],
   );
@@ -207,7 +172,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     workspaces,
     workspace,
     campaign,
-    accounts,
     step,
     setStep,
     selectApp,
@@ -215,7 +179,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     updateApp,
     deleteApp,
     updateCampaign,
-    updateAccounts,
     studioReady,
   };
 
