@@ -52,7 +52,8 @@ export const TOOL_GUIDES: Record<string, ToolGuide> = {
     steps: [
       "Dépose une ou plusieurs images PNG, JPG ou WebP.",
       "Choisis un preset ou ajuste les curseurs (Simple / Advanced).",
-      "Exporte une image ou un ZIP si tu en as plusieurs.",
+      "Active « Variantes uniques » pour générer plusieurs dossiers avec des images différentes.",
+      "Exporte une image, un ZIP simple, ou un pack multi-variantes.",
     ],
   },
   "/converter": {

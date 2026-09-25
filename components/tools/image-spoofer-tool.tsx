@@ -20,6 +20,11 @@ import {
   deleteCustomSpooferPreset,
   saveCustomSpooferPreset,
 } from "@/lib/spoofer/presets";
+import {
+  randomizeAdjustments,
+  slideFilename,
+  variantFolderName,
+} from "@/lib/spoofer/variations";
 import { getToolGuide } from "@/lib/tool-guides";
 
 type SpooferTab = "simple" | "advanced";
@@ -71,6 +76,8 @@ export function ImageSpooferTool() {
   const [preview, setPreview] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [variantsEnabled, setVariantsEnabled] = useState(false);
+  const [numVariants, setNumVariants] = useState(3);
   const [busy, setBusy] = useState(false);
 
   const activeFile = files[activeIndex] ?? null;
@@ -153,10 +160,44 @@ export function ImageSpooferTool() {
     setMessage(`Preset « ${presetName} » supprimé.`);
   }
 
-  async function renderSpoofedBlob(file: File): Promise<Blob> {
+  async function renderSpoofedBlob(
+    file: File,
+    adj: ImageAdjustments = adjustments,
+  ): Promise<Blob> {
     const img = await loadImageFile(file);
-    const canvas = drawAdjustedImage(img, adjustments);
-    return canvasToBlob(canvas, "image/jpeg", adjustments.quality);
+    const canvas = drawAdjustedImage(img, adj);
+    return canvasToBlob(canvas, "image/jpeg", adj.quality);
+  }
+
+  async function exportVariantFolders() {
+    const count = Math.max(2, Math.min(20, numVariants));
+    const entries: { filename: string; blob: Blob }[] = [];
+
+    for (let v = 0; v < count; v += 1) {
+      const folder = variantFolderName(v);
+      for (let i = 0; i < files.length; i += 1) {
+        const adj = randomizeAdjustments(adjustments);
+        const blob = await renderSpoofedBlob(files[i], adj);
+        const filename =
+          files.length > 1
+            ? slideFilename(i)
+            : files[i].name.replace(/\.[^.]+$/, "") + ".jpg";
+        entries.push({ filename: `${folder}/${filename}`, blob });
+      }
+    }
+
+    const readme = [
+      "Pack variantes — carrousels.studio",
+      "",
+      `${count} dossier(s), ${files.length} image(s) par dossier.`,
+      "Chaque variante = réglages aléatoires différents (luminosité, contraste, bruit…).",
+      "1 dossier = 1 version unique prête à publier.",
+    ].join("\n");
+
+    await downloadSpooferZip(entries, "spoof-variantes", readme);
+    setMessage(
+      `${count} variantes générées (${count} dossiers × ${files.length} image${files.length > 1 ? "s" : ""}).`,
+    );
   }
 
   async function exportImages() {
@@ -164,6 +205,11 @@ export function ImageSpooferTool() {
     setBusy(true);
     setMessage(null);
     try {
+      if (variantsEnabled) {
+        await exportVariantFolders();
+        return;
+      }
+
       if (files.length === 1) {
         const blob = await renderSpoofedBlob(files[0]);
         downloadBlob(blob, spoofFilename(files[0]));
@@ -184,6 +230,16 @@ export function ImageSpooferTool() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function exportLabel() {
+    if (busy) return "Génération…";
+    if (variantsEnabled) {
+      const count = Math.max(2, Math.min(20, numVariants));
+      return `Générer ${count} variantes (ZIP)`;
+    }
+    if (files.length > 1) return `Exporter tout (ZIP · ${files.length})`;
+    return "Exporter l'image";
   }
 
   const simpleSliders = ["brightness", "contrast", "saturation"] as const;
@@ -364,6 +420,40 @@ export function ImageSpooferTool() {
               </>
             ) : null}
           </div>
+
+          <div className="k-card space-y-3">
+            <label className="flex cursor-pointer items-start gap-2 text-sm k-text">
+              <input
+                type="checkbox"
+                checked={variantsEnabled}
+                onChange={(e) => setVariantsEnabled(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="font-medium">Variantes uniques</span>
+                <span className="mt-0.5 block text-xs k-text-muted">
+                  Génère plusieurs dossiers ({`variante-01`}, {`variante-02`}…) avec des
+                  images toutes différentes.
+                </span>
+              </span>
+            </label>
+            {variantsEnabled ? (
+              <label className="block">
+                <span className="k-label mb-1 block">Nombre de variantes</span>
+                <input
+                  type="number"
+                  min={2}
+                  max={20}
+                  value={numVariants}
+                  onChange={(e) =>
+                    setNumVariants(Math.max(2, Math.min(20, Number(e.target.value) || 2)))
+                  }
+                  className="k-input h-10 w-24"
+                />
+              </label>
+            ) : null}
+          </div>
+
           <button
             type="button"
             disabled={!files.length || busy}
@@ -371,9 +461,7 @@ export function ImageSpooferTool() {
             className="flex h-10 w-full items-center justify-center gap-2 k-btn-primary disabled:opacity-50"
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {files.length > 1
-              ? `Exporter tout (ZIP · ${files.length})`
-              : "Exporter l'image"}
+            {exportLabel()}
           </button>
         </div>
         <div className="k-card flex min-h-[280px] flex-col items-center justify-center">

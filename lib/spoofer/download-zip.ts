@@ -6,6 +6,7 @@ export type SpooferZipEntry = {
 export async function downloadSpooferZip(
   entries: SpooferZipEntry[],
   label = "spoof",
+  readme?: string,
 ): Promise<void> {
   if (!entries.length) return;
 
@@ -29,6 +30,10 @@ export async function downloadSpooferZip(
     }
     used.add(name);
     zip.file(name, entry.blob);
+  }
+
+  if (readme?.trim()) {
+    zip.file("README.txt", readme.trim());
   }
 
   const archive = await zip.generateAsync({ type: "blob" });
