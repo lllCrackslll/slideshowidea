@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FileDropzone } from "@/components/shell/file-dropzone";
 import { ToolPage } from "@/components/shell/tool-page";
 import { ToolTutorial } from "@/components/shell/tool-tutorial";
@@ -12,6 +12,12 @@ import {
   loadImageFile,
   type ImageAdjustments,
 } from "@/lib/image-processing";
+import {
+  allSpooferPresets,
+  BUILTIN_SPOOFER_PRESET_NAMES,
+  deleteCustomSpooferPreset,
+  saveCustomSpooferPreset,
+} from "@/lib/spoofer/presets";
 import { getToolGuide } from "@/lib/tool-guides";
 
 type SpooferTab = "simple" | "advanced";
@@ -49,11 +55,24 @@ function SliderRow({
 
 export function ImageSpooferTool() {
   const [tab, setTab] = useState<SpooferTab>("simple");
-  const [adjustments, setAdjustments] =
-    useState<ImageAdjustments>(DEFAULT_ADJUSTMENTS);
+  const [presets, setPresets] = useState(() => allSpooferPresets());
+  const [adjustments, setAdjustments] = useState<ImageAdjustments>(
+    () => allSpooferPresets()["Default Preset"] ?? DEFAULT_ADJUSTMENTS,
+  );
+  const [presetName, setPresetName] = useState("Default Preset");
+  const [customPresetName, setCustomPresetName] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+
+  function refreshPresets() {
+    setPresets(allSpooferPresets());
+  }
+
+  useEffect(() => {
+    refreshPresets();
+  }, []);
 
   async function handleFile(files: File[]) {
     const next = files[0];
@@ -68,10 +87,38 @@ export function ImageSpooferTool() {
     setPreview(canvas.toDataURL("image/jpeg", 0.85));
   }
 
-  function patch(partial: Partial<ImageAdjustments>) {
-    const next = { ...adjustments, ...partial };
+  function applyAdjustments(next: ImageAdjustments) {
     setAdjustments(next);
     if (file) void refreshPreview(file, next);
+  }
+
+  function patch(partial: Partial<ImageAdjustments>) {
+    applyAdjustments({ ...adjustments, ...partial });
+  }
+
+  function applyPreset(name: string) {
+    const preset = presets[name];
+    if (!preset) return;
+    applyAdjustments({ ...preset });
+    setPresetName(name);
+  }
+
+  function handleSavePreset() {
+    const name = customPresetName.trim();
+    if (!name) return;
+    saveCustomSpooferPreset(name, adjustments);
+    refreshPresets();
+    setPresetName(name);
+    setCustomPresetName("");
+    setMessage(`Preset « ${name} » sauvegardé.`);
+  }
+
+  function handleDeletePreset() {
+    if (BUILTIN_SPOOFER_PRESET_NAMES.has(presetName)) return;
+    deleteCustomSpooferPreset(presetName);
+    refreshPresets();
+    applyPreset("Default Preset");
+    setMessage(`Preset « ${presetName} » supprimé.`);
   }
 
   async function exportImage() {
@@ -94,6 +141,52 @@ export function ImageSpooferTool() {
       title="Image Spoofer"
       subtitle="Transforme des images pour créer des variantes uniques."
     >
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <label className="block min-w-[10rem] flex-1">
+          <span className="k-label mb-1 block">Preset</span>
+          <select
+            value={presetName}
+            onChange={(e) => applyPreset(e.target.value)}
+            className="k-input h-10 w-full"
+          >
+            {Object.keys(presets).map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block min-w-[10rem] flex-1">
+          <span className="k-label mb-1 block">Sauver preset as</span>
+          <input
+            value={customPresetName}
+            onChange={(e) => setCustomPresetName(e.target.value)}
+            placeholder="Mon preset"
+            className="k-input h-10 w-full"
+          />
+        </label>
+        <button type="button" onClick={handleSavePreset} className="k-btn-secondary h-10 px-4">
+          Sauver
+        </button>
+        <button
+          type="button"
+          onClick={handleDeletePreset}
+          disabled={BUILTIN_SPOOFER_PRESET_NAMES.has(presetName)}
+          className="k-btn-ghost h-10 px-3 disabled:opacity-40"
+        >
+          Supprimer preset
+        </button>
+        <button
+          type="button"
+          onClick={() => applyPreset("Default Preset")}
+          className="k-btn-ghost h-10 px-3"
+        >
+          Réinitialiser
+        </button>
+      </div>
+
+      {message ? <p className="mb-4 text-xs k-text-muted">{message}</p> : null}
+
       <div className="mb-4 k-tab-bar">
         {(["simple", "advanced"] as const).map((t) => (
           <button

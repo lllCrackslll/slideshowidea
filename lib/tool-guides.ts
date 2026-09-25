@@ -48,11 +48,11 @@ export const TOOL_GUIDES: Record<string, ToolGuide> = {
   },
   "/image-spoofer": {
     status: "functional",
-    statusHint: "Traitement local Canvas — sans upload serveur.",
+    statusHint: "Presets Default/TikTok/Instagram + réglages custom, traitement local Canvas.",
     steps: [
       "Dépose une image PNG, JPG ou WebP.",
-      "Ajuste luminosité, contraste, saturation.",
-      "Exporte le JPEG modifié.",
+      "Choisis un preset ou ajuste les curseurs (Simple / Advanced).",
+      "Sauvegarde ton propre preset si besoin, puis exporte le JPEG.",
     ],
   },
   "/converter": {
