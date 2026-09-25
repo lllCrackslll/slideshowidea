@@ -23,7 +23,6 @@ export const BUILTIN_SPOOFER_PRESETS: Record<string, SpooferPreset> = {
     brightness: 106,
     contrast: 108,
     saturation: 106,
-    rotation: 2,
     noise: 14,
     blurBorder: 8,
   },
