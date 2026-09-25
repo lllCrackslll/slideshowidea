@@ -50,9 +50,9 @@ export const TOOL_GUIDES: Record<string, ToolGuide> = {
     status: "functional",
     statusHint: "Presets Default/TikTok/Instagram + réglages custom, traitement local Canvas.",
     steps: [
-      "Dépose une image PNG, JPG ou WebP.",
+      "Dépose une ou plusieurs images PNG, JPG ou WebP.",
       "Choisis un preset ou ajuste les curseurs (Simple / Advanced).",
-      "Sauvegarde ton propre preset si besoin, puis exporte le JPEG.",
+      "Exporte une image ou un ZIP si tu en as plusieurs.",
     ],
   },
   "/converter": {

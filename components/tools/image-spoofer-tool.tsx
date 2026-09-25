@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { FileDropzone } from "@/components/shell/file-dropzone";
 import { ToolPage } from "@/components/shell/tool-page";
@@ -12,6 +13,7 @@ import {
   loadImageFile,
   type ImageAdjustments,
 } from "@/lib/image-processing";
+import { downloadSpooferZip } from "@/lib/spoofer/download-zip";
 import {
   allSpooferPresets,
   BUILTIN_SPOOFER_PRESET_NAMES,
@@ -21,6 +23,10 @@ import {
 import { getToolGuide } from "@/lib/tool-guides";
 
 type SpooferTab = "simple" | "advanced";
+
+function spoofFilename(file: File): string {
+  return `spoof-${file.name.replace(/\.[^.]+$/, "")}.jpg`;
+}
 
 function SliderRow({
   label,
@@ -63,8 +69,11 @@ export function ImageSpooferTool() {
   const [customPresetName, setCustomPresetName] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
   const [busy, setBusy] = useState(false);
+
+  const activeFile = files[activeIndex] ?? null;
 
   function refreshPresets() {
     setPresets(allSpooferPresets());
@@ -74,22 +83,45 @@ export function ImageSpooferTool() {
     refreshPresets();
   }, []);
 
-  async function handleFile(files: File[]) {
-    const next = files[0];
-    if (!next) return;
-    setFile(next);
-    await refreshPreview(next, adjustments);
-  }
-
   async function refreshPreview(f: File, adj: ImageAdjustments) {
     const img = await loadImageFile(f);
     const canvas = drawAdjustedImage(img, adj);
     setPreview(canvas.toDataURL("image/jpeg", 0.85));
   }
 
+  async function handleFiles(incoming: File[]) {
+    const imageFiles = incoming.filter((f) => f.type.startsWith("image/"));
+    if (!imageFiles.length) return;
+
+    const startIndex = files.length;
+    setFiles((prev) => [...prev, ...imageFiles]);
+    setActiveIndex(startIndex);
+    setMessage(null);
+    await refreshPreview(imageFiles[0], adjustments);
+  }
+
+  function removeFile(index: number) {
+    setFiles((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      const nextActive = Math.min(activeIndex, Math.max(0, next.length - 1));
+      setActiveIndex(nextActive);
+      const nextFile = next[nextActive];
+      if (nextFile) void refreshPreview(nextFile, adjustments);
+      else setPreview(null);
+      return next;
+    });
+  }
+
+  function selectFile(index: number) {
+    const file = files[index];
+    if (!file) return;
+    setActiveIndex(index);
+    void refreshPreview(file, adjustments);
+  }
+
   function applyAdjustments(next: ImageAdjustments) {
     setAdjustments(next);
-    if (file) void refreshPreview(file, next);
+    if (activeFile) void refreshPreview(activeFile, next);
   }
 
   function patch(partial: Partial<ImageAdjustments>) {
@@ -121,14 +153,34 @@ export function ImageSpooferTool() {
     setMessage(`Preset « ${presetName} » supprimé.`);
   }
 
-  async function exportImage() {
-    if (!file) return;
+  async function renderSpoofedBlob(file: File): Promise<Blob> {
+    const img = await loadImageFile(file);
+    const canvas = drawAdjustedImage(img, adjustments);
+    return canvasToBlob(canvas, "image/jpeg", adjustments.quality);
+  }
+
+  async function exportImages() {
+    if (!files.length) return;
     setBusy(true);
+    setMessage(null);
     try {
-      const img = await loadImageFile(file);
-      const canvas = drawAdjustedImage(img, adjustments);
-      const blob = await canvasToBlob(canvas, "image/jpeg", adjustments.quality);
-      downloadBlob(blob, `spoof-${file.name.replace(/\.[^.]+$/, "")}.jpg`);
+      if (files.length === 1) {
+        const blob = await renderSpoofedBlob(files[0]);
+        downloadBlob(blob, spoofFilename(files[0]));
+        setMessage("Image exportée.");
+        return;
+      }
+
+      const entries = await Promise.all(
+        files.map(async (file) => ({
+          filename: spoofFilename(file),
+          blob: await renderSpoofedBlob(file),
+        })),
+      );
+      await downloadSpooferZip(entries, "spoof");
+      setMessage(`${entries.length} images exportées en ZIP.`);
+    } catch {
+      setMessage("Export impossible.");
     } finally {
       setBusy(false);
     }
@@ -204,9 +256,61 @@ export function ImageSpooferTool() {
         <div className="space-y-4">
           <FileDropzone
             accept="image/png,image/jpeg,image/webp"
-            label="Image source"
-            onFiles={handleFile}
+            multiple
+            label="Images source"
+            hint="Glisse plusieurs images ou clique pour parcourir"
+            onFiles={handleFiles}
           />
+
+          {files.length > 0 ? (
+            <div className="k-card">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="k-label">
+                  {files.length} image{files.length > 1 ? "s" : ""}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFiles([]);
+                    setActiveIndex(0);
+                    setPreview(null);
+                  }}
+                  className="k-btn-ghost py-1 text-xs"
+                >
+                  Tout effacer
+                </button>
+              </div>
+              <ul className="flex max-h-32 flex-wrap gap-2 overflow-y-auto">
+                {files.map((file, index) => (
+                  <li
+                    key={`${file.name}-${file.size}-${index}`}
+                    className={`flex max-w-[9rem] items-center gap-1 rounded-lg border px-2 py-1.5 text-xs transition-colors ${
+                      index === activeIndex
+                        ? "border-[var(--accent)] bg-[var(--accent-soft)]"
+                        : "border-[var(--border)]"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => selectFile(index)}
+                      className="min-w-0 flex-1 truncate text-left k-text"
+                    >
+                      {file.name}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(index)}
+                      className="shrink-0 rounded p-0.5 k-text-muted hover:k-text"
+                      aria-label={`Retirer ${file.name}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           <div className="k-card space-y-3">
             {simpleSliders.map((key) => (
               <SliderRow
@@ -262,21 +366,31 @@ export function ImageSpooferTool() {
           </div>
           <button
             type="button"
-            disabled={!file || busy}
-            onClick={exportImage}
-            className="h-10 w-full k-btn-primary disabled:opacity-50"
+            disabled={!files.length || busy}
+            onClick={() => void exportImages()}
+            className="flex h-10 w-full items-center justify-center gap-2 k-btn-primary disabled:opacity-50"
           >
-            Exporter l&apos;image
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {files.length > 1
+              ? `Exporter tout (ZIP · ${files.length})`
+              : "Exporter l'image"}
           </button>
         </div>
-        <div className="k-card flex min-h-[280px] items-center justify-center">
+        <div className="k-card flex min-h-[280px] flex-col items-center justify-center">
           {preview ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={preview}
-              alt="Preview"
-              className="max-h-[420px] max-w-full rounded-lg object-contain"
-            />
+            <>
+              {activeFile ? (
+                <p className="mb-2 max-w-full truncate text-xs k-text-muted">
+                  Aperçu · {activeFile.name}
+                </p>
+              ) : null}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={preview}
+                alt="Preview"
+                className="max-h-[420px] max-w-full rounded-lg object-contain"
+              />
+            </>
           ) : (
             <p className="text-xs k-text-faint">Aperçu ici</p>
           )}
