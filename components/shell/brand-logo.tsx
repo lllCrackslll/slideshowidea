@@ -7,7 +7,7 @@ type BrandLogoProps = {
 export function BrandLogo({ className = "" }: BrandLogoProps) {
   return (
     <Link
-      href="/"
+      href="/import"
       className={`group inline-flex shrink-0 items-center gap-0.5 text-base font-bold tracking-tight sm:text-xl md:text-2xl ${className}`}
     >
       <span className="k-text">carrousels</span>

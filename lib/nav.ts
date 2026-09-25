@@ -1,11 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import {
-  Clapperboard,
-  FileImage,
-  Link2,
-  Minimize2,
-  Sparkles,
-} from "lucide-react";
+import { Clapperboard, ImageIcon, Link2 } from "lucide-react";
 
 export type NavItem = {
   href: string;
@@ -23,26 +17,14 @@ export const TOOLS: NavItem[] = [
   },
   {
     href: "/repurpose",
-    label: "Repurpose",
+    label: "Video",
     icon: Clapperboard,
     description: "Crée des variantes uniques de vidéos (filtres, metadata, watermark).",
   },
   {
-    href: "/converter",
-    label: "Converter",
-    icon: FileImage,
-    description: "Convertit PNG et WebP en JPEG instantanément.",
-  },
-  {
-    href: "/reducer",
-    label: "Reducer",
-    icon: Minimize2,
-    description: "Compresse le poids de tes images JPEG.",
-  },
-  {
     href: "/image-spoofer",
-    label: "Spoofer",
-    icon: Sparkles,
+    label: "Image",
+    icon: ImageIcon,
     description: "Transforme des images pour éviter les doublons détectés.",
   },
 ];

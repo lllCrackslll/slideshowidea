@@ -1,5 +1,5 @@
-import { ConverterTool } from "@/components/tools/converter-tool";
+import { redirect } from "next/navigation";
 
 export default function ConverterPage() {
-  return <ConverterTool />;
+  redirect("/import");
 }

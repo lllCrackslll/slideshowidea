@@ -246,7 +246,7 @@ export function ImageSpooferTool() {
 
   return (
     <ToolPage
-      title="Image Spoofer"
+      title="Image"
       subtitle="Transforme des images pour créer des variantes uniques."
     >
       <div className="mb-4 flex flex-wrap items-end gap-3">

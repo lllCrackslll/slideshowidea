@@ -6,7 +6,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "carrousels.studio",
   description:
-    "Outils image et vidéo pour créer des variantes uniques — repurpose, conversion, compression et spoofer.",
+    "Import TikTok, variantes vidéo et image uniques pour carrousels.",
   icons: {
     icon: [{ url: "/icon.png", type: "image/png", sizes: "192x192" }],
     apple: [{ url: "/apple-icon.png", type: "image/png", sizes: "180x180" }],

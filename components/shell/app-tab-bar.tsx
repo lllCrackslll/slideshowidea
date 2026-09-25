@@ -19,12 +19,6 @@ export function AppTabBar() {
           aria-label="Outils"
           className="k-nav-pill flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          <Link
-            href="/"
-            className={`k-nav-link min-h-9 shrink-0 px-2.5 sm:px-3 ${pathname === "/" ? "k-nav-link-active" : ""}`}
-          >
-            Accueil
-          </Link>
           {TOOLS.map((item) => {
             const active = pathname.startsWith(item.href);
             const Icon = item.icon;

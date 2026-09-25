@@ -30,7 +30,7 @@ export const TOOL_GUIDES: Record<string, ToolGuide> = {
   "/repurpose": {
     status: "partial",
     statusHint:
-      "FFmpeg dans le navigateur. Vidéos courtes (< ~60 s) recommandées.",
+      "Video — FFmpeg dans le navigateur. Vidéos courtes (< ~60 s) recommandées.",
     steps: [
       "Choisis un preset ou ajuste les filtres.",
       "Dépose une ou plusieurs vidéos MP4/MOV/MKV.",
@@ -48,28 +48,12 @@ export const TOOL_GUIDES: Record<string, ToolGuide> = {
   },
   "/image-spoofer": {
     status: "functional",
-    statusHint: "Presets Default/TikTok/Instagram + réglages custom, traitement local Canvas.",
+    statusHint: "Image — presets Default/TikTok/Instagram + variantes uniques, traitement local.",
     steps: [
       "Dépose une ou plusieurs images PNG, JPG ou WebP.",
       "Choisis un preset ou ajuste les curseurs (Simple / Advanced).",
       "Active « Variantes uniques » pour générer plusieurs dossiers avec des images différentes.",
       "Exporte une image, un ZIP simple, ou un pack multi-variantes.",
-    ],
-  },
-  "/converter": {
-    status: "functional",
-    statusHint: "Conversion PNG/WebP → JPEG locale.",
-    steps: [
-      "Dépose une image.",
-      "Le JPEG se télécharge automatiquement.",
-    ],
-  },
-  "/reducer": {
-    status: "functional",
-    statusHint: "Compression JPEG locale.",
-    steps: [
-      "Règle la qualité JPEG.",
-      "Dépose une image — téléchargement automatique.",
     ],
   },
 };

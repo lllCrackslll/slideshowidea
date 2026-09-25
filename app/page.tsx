@@ -1,5 +1,5 @@
-import { ToolsHome } from "@/components/shell/tools-home";
+import { redirect } from "next/navigation";
 
 export default function HomePage() {
-  return <ToolsHome />;
+  redirect("/import");
 }

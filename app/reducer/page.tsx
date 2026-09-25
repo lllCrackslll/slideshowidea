@@ -1,5 +1,5 @@
-import { ReducerTool } from "@/components/tools/reducer-tool";
+import { redirect } from "next/navigation";
 
 export default function ReducerPage() {
-  return <ReducerTool />;
+  redirect("/import");
 }

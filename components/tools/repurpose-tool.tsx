@@ -176,8 +176,8 @@ export function RepurposeTool() {
 
   return (
     <ToolPage
-      title="Repurpose Bot"
-      subtitle="Variantes uniques — filtres, presets, watermark, metadata US."
+      title="Video"
+      subtitle="Variantes vidéo uniques — filtres, presets, watermark, metadata US."
     >
       <div className="mb-4 flex flex-wrap items-end gap-2">
         <label className="text-xs k-text-muted">
