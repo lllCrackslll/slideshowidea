@@ -17,6 +17,16 @@ export const TOOL_GUIDES: Record<string, ToolGuide> = {
       "Exporte le ZIP pour tous tes comptes — fonds auto ou images custom.",
     ],
   },
+  "/import": {
+    status: "functional",
+    statusHint: "Importe un carrousel photo TikTok public via son URL.",
+    steps: [
+      "Colle le lien TikTok (format /video/…, carrousel photo public).",
+      "Clique Importer — les slides s'affichent en aperçu.",
+      "Télécharge slide par slide ou exporte le ZIP + légende.",
+      "Utilise les prompts IA pour traduire/modifier les images dans ton outil préféré.",
+    ],
+  },
   "/repurpose": {
     status: "partial",
     statusHint:

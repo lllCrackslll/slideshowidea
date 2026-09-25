@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Clapperboard,
   FileImage,
+  Link2,
   Minimize2,
   Sparkles,
 } from "lucide-react";
@@ -14,6 +15,12 @@ export type NavItem = {
 };
 
 export const TOOLS: NavItem[] = [
+  {
+    href: "/import",
+    label: "Import",
+    icon: Link2,
+    description: "Télécharge les slides d'un carrousel TikTok à partir de son lien.",
+  },
   {
     href: "/repurpose",
     label: "Repurpose",
