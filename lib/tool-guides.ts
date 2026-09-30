@@ -27,6 +27,15 @@ export const TOOL_GUIDES: Record<string, ToolGuide> = {
       "Utilise les prompts IA pour traduire/modifier les images dans ton outil préféré.",
     ],
   },
+  "/texte": {
+    status: "functional",
+    statusHint: "Caption centrée, blanc + contour noir, directement sur l'image.",
+    steps: [
+      "Dépose une image PNG, JPG ou WebP.",
+      "Écris ta caption. Un retour à la ligne crée une nouvelle ligne.",
+      "Clique Générer — l'image se télécharge et s'affiche à droite.",
+    ],
+  },
   "/repurpose": {
     status: "partial",
     statusHint:

@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Clapperboard, ImageIcon, Link2 } from "lucide-react";
+import { Clapperboard, ImageIcon, Link2, Type } from "lucide-react";
 
 export type NavItem = {
   href: string;
@@ -14,6 +14,12 @@ export const TOOLS: NavItem[] = [
     label: "Import",
     icon: Link2,
     description: "Télécharge les slides d'un carrousel TikTok à partir de son lien.",
+  },
+  {
+    href: "/texte",
+    label: "Texte",
+    icon: Type,
+    description: "Ajoute une caption blanche avec contour noir, style TikTok.",
   },
   {
     href: "/repurpose",
