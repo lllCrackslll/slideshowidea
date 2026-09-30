@@ -32,6 +32,7 @@ export const TOOL_GUIDES: Record<string, ToolGuide> = {
     statusHint: "Caption centrée, blanc + contour noir, directement sur l'image.",
     steps: [
       "Dépose une image PNG, JPG ou WebP.",
+      "Choisis la police et la taille.",
       "Écris ta caption. Un retour à la ligne crée une nouvelle ligne.",
       "Clique Générer — l'image se télécharge et s'affiche à droite.",
     ],

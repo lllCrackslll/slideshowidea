@@ -7,6 +7,15 @@ import { ToolPage } from "@/components/shell/tool-page";
 import { ToolTutorial } from "@/components/shell/tool-tutorial";
 import { renderCaptionOverlay } from "@/lib/caption-overlay";
 import {
+  CAPTION_FONTS,
+  DEFAULT_CAPTION_FONT_ID,
+  DEFAULT_CAPTION_SIZE,
+  MAX_CAPTION_SIZE,
+  MIN_CAPTION_SIZE,
+  getCaptionFont,
+  type CaptionFontId,
+} from "@/lib/caption-fonts";
+import {
   canvasToBlob,
   downloadBlob,
   loadImageFile,
@@ -17,6 +26,8 @@ export function CaptionTool() {
   const guide = getToolGuide("/texte");
   const [file, setFile] = useState<File | null>(null);
   const [caption, setCaption] = useState("");
+  const [fontId, setFontId] = useState<CaptionFontId>(DEFAULT_CAPTION_FONT_ID);
+  const [fontSize, setFontSize] = useState(DEFAULT_CAPTION_SIZE);
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -40,8 +51,10 @@ export function CaptionTool() {
     setBusy(true);
     setMessage(null);
     try {
+      const font = getCaptionFont(fontId);
+      await document.fonts.load(`${font.weight} 64px ${font.family}`);
       const img = await loadImageFile(file);
-      const canvas = renderCaptionOverlay(img, text);
+      const canvas = renderCaptionOverlay(img, text, { font, size: fontSize });
       const blob = await canvasToBlob(canvas, "image/jpeg", 0.95);
       const url = URL.createObjectURL(blob);
       setPreview((current) => {
@@ -77,6 +90,48 @@ export function CaptionTool() {
             </p>
           ) : null}
 
+          <div className="sr-only" aria-hidden>
+            {CAPTION_FONTS.map((font) =>
+              font.className ? (
+                <span key={font.id} className={font.className}>
+                  {font.label}
+                </span>
+              ) : null,
+            )}
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="k-label mb-1 block">Police</span>
+              <select
+                value={fontId}
+                onChange={(e) => setFontId(e.target.value as CaptionFontId)}
+                className="k-input h-10 w-full"
+                style={{ fontFamily: getCaptionFont(fontId).family }}
+              >
+                {CAPTION_FONTS.map((font) => (
+                  <option key={font.id} value={font.id} style={{ fontFamily: font.family }}>
+                    {font.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="k-label mb-1 flex justify-between">
+                <span>Taille</span>
+                <span>{fontSize}</span>
+              </span>
+              <input
+                type="range"
+                min={MIN_CAPTION_SIZE}
+                max={MAX_CAPTION_SIZE}
+                value={fontSize}
+                onChange={(e) => setFontSize(Number(e.target.value))}
+                className="mt-3 w-full accent-[#007aff]"
+              />
+            </label>
+          </div>
+
           <label className="block">
             <span className="k-label mb-1 block">Caption</span>
             <textarea
@@ -85,6 +140,7 @@ export function CaptionTool() {
               placeholder={"Ta phrase ici\nRetour à la ligne = nouvelle ligne"}
               rows={4}
               className="k-input min-h-28 w-full resize-y py-3"
+              style={{ fontFamily: getCaptionFont(fontId).family }}
             />
           </label>
 

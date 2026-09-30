@@ -1,4 +1,10 @@
-const FONT_FAMILY = '"Arial Black", "Helvetica Neue", Arial, sans-serif';
+import type { CaptionFont } from "@/lib/caption-fonts";
+
+export type CaptionDrawStyle = {
+  font: CaptionFont;
+  /** Taille en pixels pour une image de 1080 px de large. */
+  size: number;
+};
 
 function wrapWords(
   ctx: CanvasRenderingContext2D,
@@ -44,8 +50,9 @@ function layoutCaption(
   caption: string,
   fontSize: number,
   maxWidth: number,
+  font: CaptionFont,
 ): string[] {
-  ctx.font = `800 ${fontSize}px ${FONT_FAMILY}`;
+  ctx.font = `${font.weight} ${fontSize}px ${font.family}`;
   const lines: string[] = [];
   for (const paragraph of caption.split("\n")) {
     const trimmed = paragraph.trim();
@@ -62,6 +69,7 @@ function layoutCaption(
 export function renderCaptionOverlay(
   img: HTMLImageElement,
   caption: string,
+  style: CaptionDrawStyle,
 ): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.width = img.naturalWidth || img.width;
@@ -75,15 +83,11 @@ export function renderCaptionOverlay(
   if (!text) return canvas;
 
   const maxWidth = canvas.width * 0.86;
-  const maxHeight = canvas.height * 0.7;
-  let fontSize = Math.round(canvas.width * 0.082);
-  let lines = layoutCaption(ctx, text, fontSize, maxWidth);
-
-  while (fontSize > 24 && lines.length * fontSize * 1.18 > maxHeight) {
-    fontSize -= 2;
-    lines = layoutCaption(ctx, text, fontSize, maxWidth);
-  }
-
+  const fontSize = Math.max(
+    12,
+    Math.round(style.size * (canvas.width / 1080)),
+  );
+  const lines = layoutCaption(ctx, text, fontSize, maxWidth, style.font);
   const lineHeight = fontSize * 1.18;
   const blockHeight = lines.length * lineHeight;
   let y = (canvas.height - blockHeight) / 2 + lineHeight / 2;
@@ -92,11 +96,11 @@ export function renderCaptionOverlay(
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
   ctx.miterLimit = 2;
-  ctx.font = `800 ${fontSize}px ${FONT_FAMILY}`;
+  ctx.font = `${style.font.weight} ${fontSize}px ${style.font.family}`;
 
   for (const line of lines) {
     if (line) {
-      ctx.lineWidth = Math.max(8, fontSize * 0.18);
+      ctx.lineWidth = Math.max(4, fontSize * style.font.stroke);
       ctx.strokeStyle = "#000000";
       ctx.strokeText(line, canvas.width / 2, y);
       ctx.fillStyle = "#ffffff";
